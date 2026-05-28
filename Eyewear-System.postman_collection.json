@@ -1,0 +1,1988 @@
+{
+  "info": {
+    "name": "Eyewear System API",
+    "description": "Backend-only API collection for Eyewear System UTH - EVELENS. Includes route coverage, role-based tokens, seeded credentials, dynamic variables, and basic response scripts.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "authToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "customerToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "salesToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "operationsToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "managerToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "adminToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "customerEmail",
+      "value": "customer@eyewear.com",
+      "type": "string"
+    },
+    {
+      "key": "salesEmail",
+      "value": "sales@eyewear.com",
+      "type": "string"
+    },
+    {
+      "key": "operationsEmail",
+      "value": "operations@eyewear.com",
+      "type": "string"
+    },
+    {
+      "key": "managerEmail",
+      "value": "manager@eyewear.com",
+      "type": "string"
+    },
+    {
+      "key": "adminEmail",
+      "value": "admin@eyewear.com",
+      "type": "string"
+    },
+    {
+      "key": "seedPassword",
+      "value": "123",
+      "type": "string"
+    },
+    {
+      "key": "productId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "productSlug",
+      "value": "lens-bevis-optical",
+      "type": "string"
+    },
+    {
+      "key": "variantId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "cartItemId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "addressId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "orderId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "paymentId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "ticketId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "voucherId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "staffId",
+      "value": "2",
+      "type": "string"
+    },
+    {
+      "key": "shipmentId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "resetToken",
+      "value": "RESET_TOKEN_HERE",
+      "type": "string"
+    },
+    {
+      "key": "verifyToken",
+      "value": "VERIFY_TOKEN_HERE",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{authToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "if (!pm.collectionVariables.get('baseUrl')) { pm.collectionVariables.set('baseUrl', 'http://localhost:8000/api/v1'); }",
+          "function upsertHeader(key, value) { if (value) pm.request.headers.upsert({ key, value }); }",
+          "const tokenName = pm.request.headers.get('X-Auth-Token-Var');",
+          "if (tokenName) { const token = pm.collectionVariables.get(tokenName); if (token) upsertHeader('Authorization', 'Bearer ' + token); pm.request.headers.remove('X-Auth-Token-Var'); }"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "pm.test('HTTP status is below 500', function () { pm.expect(pm.response.code).to.be.below(500); });",
+          "let json = null; try { json = pm.response.json(); } catch (e) {}",
+          "if (json) pm.test('Response is valid JSON', function () { pm.expect(json).to.be.an('object'); });",
+          "function dig(obj, keys) { if (!obj || typeof obj !== 'object') return undefined; for (const key of keys) { if (Object.prototype.hasOwnProperty.call(obj, key)) return obj[key]; } if (obj.data && typeof obj.data === 'object') return dig(obj.data, keys); return undefined; }",
+          "function firstArray(obj) { if (Array.isArray(obj)) return obj; if (obj && Array.isArray(obj.data)) return obj.data; if (obj && obj.data && Array.isArray(obj.data.data)) return obj.data.data; if (obj && obj.data && Array.isArray(obj.data.items)) return obj.data.items; if (obj && Array.isArray(obj.items)) return obj.items; return []; }",
+          "function setIf(name, value) { if (value !== undefined && value !== null && value !== '') pm.collectionVariables.set(name, String(value)); }",
+          "if (json) { const data = json.data || json; setIf('productId', dig(data, ['product_id','id'])); setIf('variantId', dig(data, ['variant_id','first_variant_id'])); setIf('orderId', dig(data, ['order_id','id'])); setIf('paymentId', dig(data, ['payment_id','id'])); setIf('ticketId', dig(data, ['ticket_id','id'])); setIf('voucherId', dig(data, ['voucher_id','id'])); setIf('addressId', dig(data, ['address_id','id'])); setIf('shipmentId', dig(data, ['shipment_id','id'])); const arr = firstArray(json); if (arr.length && arr[0]) { setIf('productId', arr[0].product_id || arr[0].id); setIf('variantId', arr[0].variant_id || arr[0].productvariant_id || arr[0].first_variant_id); setIf('orderId', arr[0].order_id || arr[0].id); setIf('paymentId', arr[0].payment_id || arr[0].id); setIf('ticketId', arr[0].ticket_id || arr[0].id); setIf('voucherId', arr[0].voucher_id || arr[0].id); setIf('addressId', arr[0].address_id || arr[0].id); setIf('shipmentId', arr[0].shipment_id || arr[0].id); } }"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "00. Health Check",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/health",
+            "header": []
+          }
+        },
+        {
+          "name": "API Root",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/",
+            "header": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "01. Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/register",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman Test User\",\n  \"email\": \"postman.test@example.com\",\n  \"password\": \"123456\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login (Customer)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.data && jsonData.data.token) {",
+                  "    pm.collectionVariables.set('authToken', jsonData.data.token);",
+                  "    pm.collectionVariables.set('userId', jsonData.data.user.id);",
+                  "    console.log('Token saved:', jsonData.data.token);",
+                  "}",
+                  "const res = pm.response.json();",
+                  "if (res.success && res.data && res.data.token) { pm.collectionVariables.set('customerToken', res.data.token); pm.collectionVariables.set('authToken', res.data.token); pm.collectionVariables.set('customerId', res.data.user.id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{customerEmail}}\",\n  \"password\": \"{{seedPassword}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.data && jsonData.data.token) {",
+                  "    pm.collectionVariables.set('authToken', jsonData.data.token);",
+                  "    pm.collectionVariables.set('adminToken', jsonData.data.token);",
+                  "    console.log('Admin Token saved');",
+                  "}",
+                  "const res = pm.response.json();",
+                  "if (res.success && res.data && res.data.token) { pm.collectionVariables.set('adminToken', res.data.token); pm.collectionVariables.set('authToken', res.data.token); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{seedPassword}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Current User (me)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/auth/me",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "customerToken"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/change-password",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "customerToken"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"current_password\": \"{{seedPassword}}\",\n  \"new_password\": \"{{seedPassword}}\",\n  \"confirm_password\": \"{{seedPassword}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/forgot-password",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{customerEmail}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/reset-password",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{customerEmail}}\",\n  \"token\": \"{{resetToken}}\",\n  \"password\": \"123456\",\n  \"password_confirmation\": \"123456\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Verify Email",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/auth/verify?token=VERIFY_TOKEN_HERE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/logout",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "customerToken"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Login (Manager)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{managerEmail}}\",\n  \"password\": \"{{seedPassword}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.success && res.data && res.data.token) { pm.collectionVariables.set('managerToken', res.data.token); pm.collectionVariables.set('authToken', res.data.token); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login (Sales Staff)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{salesEmail}}\",\n  \"password\": \"{{seedPassword}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.success && res.data && res.data.token) { pm.collectionVariables.set('salesToken', res.data.token); pm.collectionVariables.set('authToken', res.data.token); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login (Operations Staff)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{operationsEmail}}\",\n  \"password\": \"{{seedPassword}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.success && res.data && res.data.token) { pm.collectionVariables.set('operationsToken', res.data.token); pm.collectionVariables.set('authToken', res.data.token); }"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02. Products (Public)",
+      "item": [
+        {
+          "name": "List Products",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/products?page=1&per_page=12"
+          }
+        },
+        {
+          "name": "Get Product Detail (by ID)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/products/{{productId}}"
+          }
+        },
+        {
+          "name": "Get Product Detail (by Slug)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/products/{{productSlug}}"
+          }
+        },
+        {
+          "name": "Featured Products",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/products/featured"
+          }
+        },
+        {
+          "name": "Get Categories",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/products/categories"
+          }
+        },
+        {
+          "name": "Get Brands",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/products/brands"
+          }
+        },
+        {
+          "name": "Available Lenses",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/products/lenses/available"
+          }
+        },
+        {
+          "name": "Related Products",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/products/related?exclude_id=1&limit=4"
+          }
+        }
+      ]
+    },
+    {
+      "name": "03. Profile & Address",
+      "item": [
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/profile",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "customerToken"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/profile",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "customerToken"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"Nguyen Van A\",\n  \"phone\": \"0901234567\",\n  \"birthdate\": \"1999-01-15\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Upload Avatar",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/profile/avatar",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "customerToken"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "avatar",
+                  "type": "file",
+                  "src": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Addresses",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/profile/addresses",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "customerToken"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Add Address",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/profile/addresses",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "customerToken"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"label\": \"Home\",\n  \"phone\": \"0901234567\",\n  \"address\": \"123 Nguyen Trai, Q5, TP.HCM\",\n  \"is_default\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Address",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/profile/addresses/{{addressId}}",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "customerToken"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"label\": \"Office\",\n  \"phone\": \"0909876543\",\n  \"address\": \"456 Le Loi, Q1, TP.HCM\",\n  \"is_default\": false\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Address",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/profile/addresses/{{addressId}}",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "customerToken"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "04. Cart",
+      "item": [
+        {
+          "name": "Get Cart",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/cart",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "customerToken"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Add to Cart",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/cart",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "customerToken"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"variant_id\": \"{{variantId}}\",\n  \"quantity\": 1,\n  \"lens_id\": null,\n  \"prescription_id\": null\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Cart Item Qty",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/cart/items/{{cartItemId}}",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "customerToken"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 2\n}"
+            }
+          }
+        },
+        {
+          "name": "Toggle Item Selection",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/cart/toggle-selection",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "customerToken"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cart_item_id\": \"{{cartItemId}}\",\n  \"is_selected\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "Select All Items",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/cart/select-all",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "customerToken"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"is_selected\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "Apply Voucher",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/cart/voucher",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "customerToken"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"WELCOME10\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Remove Voucher",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/cart/voucher",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "customerToken"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Remove Cart Item",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/cart/items/{{cartItemId}}",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "customerToken"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "05. Wishlist",
+      "item": [
+        {
+          "name": "Get Wishlist",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/wishlist",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "customerToken"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Toggle Wishlist Item",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/wishlist/toggle",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "customerToken"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": \"{{productId}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Remove Wishlist Item",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/wishlist/{{productId}}",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "customerToken"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "06. Checkout & Orders",
+      "item": [
+        {
+          "name": "Place Order (Checkout)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/checkout",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "customerToken"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"shipping_address\": \"123 Nguyen Trai, Q5, TP.HCM\",\n  \"billing_address\": \"123 Nguyen Trai, Q5, TP.HCM\",\n  \"payment_method\": \"cod\",\n  \"notes\": \"\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get My Orders",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/orders",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "customerToken"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Get Order Detail",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/orders/{{orderId}}",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "customerToken"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "07. Prescriptions",
+      "item": [
+        {
+          "name": "Get My Prescriptions",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/prescriptions",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "customerToken"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Create Prescription",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/prescriptions",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "customerToken"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sph_od\": -1.50,\n  \"sph_os\": -2.00,\n  \"cyl_od\": -0.50,\n  \"cyl_os\": -0.75,\n  \"axis_od\": 180,\n  \"axis_os\": 175,\n  \"pd\": 63.5,\n  \"notes\": \"Prescription from Dr. Nguyen\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "08. Payments",
+      "item": [
+        {
+          "name": "Process Payment",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/payments/process",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "customerToken"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"order_id\": \"{{orderId}}\",\n  \"method\": \"bank_transfer\",\n  \"amount\": 1500000\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Payment Status",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/payments/status?order_id={{orderId}}",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "customerToken"
+              }
+            ]
+          }
+        },
+        {
+          "name": "[Staff] Confirm Payment",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/payments/confirm",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{salesToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "salesToken"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payment_id\": \"{{paymentId}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "[Staff] Pending Payments",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/payments/pending",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{salesToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "salesToken"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "09. Support Tickets",
+      "item": [
+        {
+          "name": "Get Tickets",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/support",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "customerToken"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Create Ticket",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/support",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "customerToken"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subject\": \"Issue with my order\",\n  \"message\": \"I received wrong product color\",\n  \"order_id\": 1\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Ticket Detail",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/support/{{ticketId}}",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "customerToken"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Reply to Ticket",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/support/reply",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "customerToken"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ticket_id\": 1,\n  \"message\": \"Please check the attached photo\"\n}"
+            }
+          }
+        },
+        {
+          "name": "[Staff] Update Ticket Status",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/support/status",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{salesToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "salesToken"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ticket_id\": \"{{ticketId}}\",\n  \"status\": \"in_progress\"\n}"
+            }
+          }
+        },
+        {
+          "name": "[Staff] Delete Ticket",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/support/delete",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{salesToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "salesToken"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ticket_id\": \"{{ticketId}}\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "10. Sales (Staff)",
+      "item": [
+        {
+          "name": "List All Orders",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/sales/orders?status=pending&page=1",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{salesToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "salesToken"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Get Order Detail (Staff)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/sales/orders/{{orderId}}",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{salesToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "salesToken"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Verify Order",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/sales/verify",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{salesToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "salesToken"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"order_id\": \"{{orderId}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Process Complaint",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/sales/complaint",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{salesToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "salesToken"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"order_id\": \"{{orderId}}\",\n  \"type\": \"return\",\n  \"reason\": \"Defective product\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Order Complaints",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/sales/order-complaints",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{salesToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "salesToken"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Update Prescription (Staff)",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/sales/prescription",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{salesToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "salesToken"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"order_item_id\": 1,\n  \"sph_od\": -1.25,\n  \"sph_os\": -1.50,\n  \"cyl_od\": -0.25,\n  \"cyl_os\": -0.50,\n  \"axis_od\": 180,\n  \"axis_os\": 170,\n  \"pd\": 62\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "11. Operations (Staff)",
+      "item": [
+        {
+          "name": "Get Production Queue",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/ops",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{operationsToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "operationsToken"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Advance Production Step",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/ops/advance",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{operationsToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "operationsToken"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"order_id\": \"{{orderId}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Create Shipment",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/ops/shipments",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{operationsToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "operationsToken"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"order_id\": \"{{orderId}}\",\n  \"courier\": \"GHTK\",\n  \"tracking_number\": \"TRK{{$timestamp}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Shipment",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/ops/shipments",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{operationsToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "operationsToken"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"shipment_id\": \"{{shipmentId}}\",\n  \"shipping_status\": \"shipping\",\n  \"tracking_number\": \"TRK{{$timestamp}}\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "12. Admin Management",
+      "item": [
+        {
+          "name": "List Users",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/admin/users?page=1",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{managerToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "managerToken"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Get User by ID",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/admin/users/{{staffId}}",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{managerToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "managerToken"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Create Staff Account",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/admin/staff",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{managerToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "managerToken"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"Nhan Vien Moi\",\n  \"email\": \"staff@example.com\",\n  \"password\": \"password123\",\n  \"role_id\": 3\n}"
+            }
+          }
+        },
+        {
+          "name": "Update User (Status/Role)",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/admin/users/{{staffId}}",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{managerToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "managerToken"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"active\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Staff",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/admin/staff/{{staffId}}",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{managerToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "managerToken"
+              }
+            ]
+          }
+        },
+        {
+          "name": "List Roles",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/admin/roles",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "adminToken"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Set System Config",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/admin/config",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "adminToken"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"key\": \"store_name\",\n  \"value\": \"EVELENS Eyewear\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get System Config",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/admin/config?key=store_name",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "adminToken"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "13. Inventory (Admin)",
+      "item": [
+        {
+          "name": "Get All Inventory",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/admin/inventory",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{managerToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "managerToken"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Update Stock",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/admin/inventory/stock",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{managerToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "managerToken"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"updates\": [\n    {\"variant_id\": 1, \"quantity\": 50},\n    {\"variant_id\": 2, \"quantity\": 30}\n  ]\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "14. Product Management (Admin)",
+      "item": [
+        {
+          "name": "Create Product",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/admin/products",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{managerToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "managerToken"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman Eyewear {{$timestamp}}\",\n  \"category_id\": 1,\n  \"base_price\": 890000,\n  \"brand\": \"EVELENS\",\n  \"gender\": \"unisex\",\n  \"description\": \"Created from Postman collection\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Product",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/admin/products/{{productId}}",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{managerToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "managerToken"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Postman Eyewear\",\n  \"base_price\": 950000\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Product",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/admin/products/{{productId}}",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{managerToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "managerToken"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Update Product (query id)",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/admin/products?id={{productId}}",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{managerToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "managerToken"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated by query id\",\n  \"base_price\": 960000\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Product (query id)",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/admin/products?id={{productId}}",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{managerToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "managerToken"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "15. Vouchers (Admin)",
+      "item": [
+        {
+          "name": "List Vouchers",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/admin/vouchers",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{managerToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "managerToken"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Create Voucher",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/admin/vouchers",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{managerToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "managerToken"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"PM{{$timestamp}}\",\n  \"title\": \"Postman Voucher\",\n  \"discount_type\": \"percentage\",\n  \"discount_value\": 20,\n  \"starts_at\": \"2026-01-01 00:00:00\",\n  \"ends_at\": \"2026-12-31 23:59:59\",\n  \"is_active\": 1\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Voucher",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/admin/vouchers/{{voucherId}}",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{managerToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "managerToken"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Updated Summer Sale\",\n  \"discount_value\": 25\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Voucher",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/admin/vouchers/{{voucherId}}",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{managerToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "managerToken"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "16. Dashboard (Staff)",
+      "item": [
+        {
+          "name": "Dashboard Summary",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/dashboard",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{managerToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "managerToken"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Operations Overview",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/dashboard/operations",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{managerToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "managerToken"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Sales Report",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/dashboard/sales-report?days=30",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{managerToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "managerToken"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
