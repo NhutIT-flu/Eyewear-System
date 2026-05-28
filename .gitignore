@@ -1,4 +1,4 @@
-﻿.env
+.env
 backend/.env
 fe/.env
 /vendor/
@@ -25,3 +25,12 @@ backend/storage/uploads/avatars/*
 .DS_Store
 Thumbs.db
 backend/.env.local
+
+# Eclipse IDE
+.metadata/
+.classpath
+.project
+.settings/
+
+# SonarLint
+.sonarlint/
