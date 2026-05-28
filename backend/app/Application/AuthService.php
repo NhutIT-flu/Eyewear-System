@@ -504,7 +504,6 @@ HTML;
         $logoBlock = $logoHtml === '' ? '' : '<div style="text-align: center; padding: 20px 28px 8px 28px;">' . $logoHtml . '</div>';
 
         return <<<HTML
-        return <<<HTML
 <div style="font-family: Arial, Helvetica, sans-serif; line-height: 1.7; color: #1f2937; background: #f7faf9; padding: 24px;">
     <div style="max-width: 620px; margin: 0 auto; background: #ffffff; border: 1px solid #e4ede9; border-radius: 18px; overflow: hidden;">
         {$logoBlock}
