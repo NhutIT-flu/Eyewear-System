@@ -474,11 +474,12 @@ def add_appendix(doc):
         doc,
         ["Epic", "Stories"],
         [
-            ("Auth Module", "Login, Register, Token Authentication, Logout, Forgot Password, Profile, Change Password, Role Authorization"),
-            ("Product Module", "Product Listing, Detail, Search, Filtering, Category, Product CRUD, Inventory, Image Handling"),
-            ("Cart Module", "Add To Cart, Remove From Cart, Update Quantity, Cart Total, Checkout Validation, Coupon Logic, Shipping Fee"),
-            ("Payment Module", "VNPay Integration, Payment Validation, Order Creation, Order History, Refund API, Transaction Logging"),
-            ("Operations Module", "Admin Dashboard, User Management, Revenue Analytics, Product Statistics, Notification System, Report Export"),
+            ("ESQ-1: Auth Module", "Login, Register, User Profile"),
+            ("ESQ-2: Product Module", "Product Catalog, Product Details"),
+            ("ESQ-3: Cart & Checkout", "Manage Shopping Cart, Checkout Process"),
+            ("ESQ-4: Order & Payment", "Process Order Payment, Confirm Payment (Staff), View Order History"),
+            ("ESQ-5: Operations", "Inventory Management"),
+            ("ESQ-6: Dashboard & Admin", "Sales Dashboard, User Management"),
         ],
         [1.7, 4.8],
     )
