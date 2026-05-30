@@ -51,24 +51,37 @@ jobs:
         echo 'DB_PASSWORD=root' >> backend/.env
 
     - name: Import database schema
-      continue-on-error: true
       run: |
-        mysql -h 127.0.0.1 -u root -proot eyewear_system < backend/database/schema.sql || echo "Schema import failed, continuing..."
+        if [ ! -f backend/database/schema.sql ]; then
+          echo "❌ schema.sql not found! Aborting to prevent cascade test failures."
+          exit 1
+        fi
+        mysql -h 127.0.0.1 -u root -proot eyewear_system < backend/database/schema.sql
+        echo "✅ Database schema imported successfully."
 
     - name: Start PHP backend server
       run: |
-        php -S 127.0.0.1:8000 -t backend/public &
-        sleep 3
-        MAX_RETRIES=5
+        php -S 127.0.0.1:8000 -t backend/public > /tmp/php-server.log 2>&1 &
+        echo "⏳ Waiting for server to be ready..."
+        MAX_RETRIES=15
         RETRY_COUNT=0
+        SERVER_READY=false
         while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-          if curl -f http://127.0.0.1:8000/api/v1/health > /dev/null 2>&1; then
-            echo "✅ Server is running!"
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8000/api/v1/health 2>/dev/null || echo "000")
+          if [ "$HTTP_CODE" != "000" ]; then
+            echo "✅ Server is responding (HTTP $HTTP_CODE)."
+            SERVER_READY=true
             break
           fi
           RETRY_COUNT=$((RETRY_COUNT + 1))
+          echo "   Attempt $RETRY_COUNT/$MAX_RETRIES — waiting 2s..."
           sleep 2
         done
+        if [ "$SERVER_READY" != "true" ]; then
+          echo "❌ Server failed to start after $MAX_RETRIES attempts. PHP log:"
+          cat /tmp/php-server.log
+          exit 1
+        fi
 
     - name: Setup Node.js Environment
       uses: actions/setup-node@v4
@@ -84,20 +97,24 @@ jobs:
       run: mkdir -p postman-reports
 
     - name: Run Eyewear API Tests
+      timeout-minutes: 10
       run: |
         newman run "Eyewear-System.postman_collection.json" \
           --env-var "baseUrl=http://127.0.0.1:8000/api/v1" \
+          --timeout-request 10000 \
+          --timeout 120000 \
           -r cli,htmlextra,json \
           --reporter-htmlextra-export ./postman-reports/report-eyewear.html \
           --reporter-json-export ./postman-reports/summary-eyewear.json \
           --suppress-exit-code
 
     # ==========================================================
-    # JIRA BUG DEDUPLICATION
-    # - Nếu bug cùng API đang mở đã tồn tại: chỉ comment vào bug cũ.
-    # - Nếu chưa tồn tại: mới tạo bug.
+    # JIRA SMART BUG MANAGEMENT
+    # - API fail  → tạo bug mới hoặc comment vào bug cũ
+    # - API pass  → tự động đóng bug tương ứng trên Jira
+    # - Transition ID "Done" được query động, không hardcode
     # ==========================================================
-    - name: Update Jira Bugs Without Duplicates
+    - name: Sync Jira Bugs With Test Results
       if: always()
       env:
         JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
@@ -121,7 +138,7 @@ jobs:
         const requiredEnv = ["JIRA_BASE_URL", "JIRA_USER_EMAIL", "JIRA_API_TOKEN", "PROJECT_KEY"];
         for (const key of requiredEnv) {
           if (!process.env[key]) {
-            console.log(`⚠️ Missing env ${key}. Skip Jira update.`);
+            console.log(`⚠️ Missing env ${key}. Skip Jira sync.`);
             process.exit(0);
           }
         }
@@ -129,7 +146,6 @@ jobs:
         const auth = Buffer
           .from(`${process.env.JIRA_USER_EMAIL}:${process.env.JIRA_API_TOKEN}`)
           .toString("base64");
-
         const jiraBase = process.env.JIRA_BASE_URL.replace(/\/$/, "");
 
         const members = [
@@ -140,122 +156,95 @@ jobs:
           "712020:83ddbb5b-a878-423a-8972-12137f84b4f3"
         ];
 
+        // ── Helpers ───────────────────────────────────────────────────────
         function curlJson(method, url, body = null) {
-          const bodyPart = body ? `-d @-` : "";
           const cmd =
             `curl -s -X ${method} ` +
             `-H "Authorization: Basic ${auth}" ` +
             `-H "Content-Type: application/json" ` +
-            `${bodyPart} "${url}"`;
-
+            `${body ? "-d @-" : ""} "${url}"`;
           const output = execSync(cmd, {
             input: body ? JSON.stringify(body) : undefined,
             encoding: "utf8",
             maxBuffer: 1024 * 1024 * 20
           });
-
           if (!output || output.trim() === "") return {};
-          try {
-            return JSON.parse(output);
-          } catch (e) {
-            console.log("⚠️ Jira response is not JSON:", output.slice(0, 500));
-            return {};
-          }
+          try { return JSON.parse(output); }
+          catch { console.log("⚠️ Jira not JSON:", output.slice(0, 300)); return {}; }
         }
 
-        function normalizeText(value) {
-          return String(value || "")
-            .replace(/[\r\n\t]+/g, " ")
-            .replace(/\s+/g, " ")
-            .trim();
+        const normalize = v => String(v || "").replace(/[\r\n\t]+/g, " ").replace(/\s+/g, " ").trim();
+        const slugify   = v => normalize(v).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60);
+        const adf       = lines => ({
+          version: 1, type: "doc",
+          content: lines.map(t => ({ type: "paragraph", content: [{ type: "text", text: String(t) }] }))
+        });
+
+        // ── Dynamic "Done" transition ID ─────────────────────────────────
+        let DONE_TRANSITION_ID = null;
+        function getDoneTransitionId(issueKey) {
+          if (DONE_TRANSITION_ID) return DONE_TRANSITION_ID;
+          const res = curlJson("GET", `${jiraBase}/rest/api/3/issue/${issueKey}/transitions`);
+          const done = (res.transitions || []).find(t =>
+            ["done", "closed", "resolved"].includes(normalize(t.name).toLowerCase())
+          );
+          if (done) { DONE_TRANSITION_ID = done.id; return done.id; }
+          console.log("⚠️ No Done transition found. Available:", (res.transitions || []).map(t => t.name).join(", "));
+          return null;
         }
 
-        function escapeJql(value) {
-          return String(value || "")
-            .replace(/\\/g, "\\\\")
-            .replace(/"/g, '\\"');
-        }
-
-        function slugify(value) {
-          return normalizeText(value)
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, "-")
-            .replace(/^-+|-+$/g, "")
-            .slice(0, 60);
-        }
-
-        const failures = [];
+        // ── Parse Newman report ───────────────────────────────────────────
+        const failedApis   = new Set();
+        const passedApis   = new Set();
+        const failures     = [];
         const uniqueErrors = new Set();
 
         for (const item of reportFiles) {
-          if (!fs.existsSync(item.file)) continue;
-
+          if (!fs.existsSync(item.file)) {
+            console.log(`⚠️ Report not found: ${item.file}`);
+            continue;
+          }
           const data = JSON.parse(fs.readFileSync(item.file, "utf8"));
-          const runFailures = data?.run?.failures || [];
 
-          for (const fail of runFailures) {
-            const apiName = normalizeText(fail?.source?.name || "Unknown API");
-            const errorMsg = normalizeText(fail?.error?.message || "Assertion failed");
-
-            // Chống trùng trong cùng 1 lần chạy.
-            const errorKey = `${item.name}|||${apiName}|||${errorMsg}`;
-            if (uniqueErrors.has(errorKey)) continue;
-            uniqueErrors.add(errorKey);
-
-            const bugKey = slugify(`${item.name}-${apiName}`);
-
+          for (const fail of (data?.run?.failures || [])) {
+            const apiName  = normalize(fail?.source?.name || "Unknown API");
+            const errorMsg = normalize(fail?.error?.message || "Assertion failed");
+            const key      = `${item.name}|||${apiName}|||${errorMsg}`;
+            if (uniqueErrors.has(key)) continue;
+            uniqueErrors.add(key);
+            failedApis.add(apiName);
             failures.push({
               moduleName: item.name,
               apiName,
               errorMsg,
-              bugKey,
+              bugKey: slugify(`${item.name}-${apiName}`),
               summary: `❌ [CI/CD] Lỗi API: ${apiName} (${item.name})`
             });
           }
-        }
 
-        if (failures.length === 0) {
-          console.log("✅ Không có lỗi Newman nào cần cập nhật Jira.");
-          process.exit(0);
+          for (const exec of (data?.run?.executions || [])) {
+            const apiName = normalize(exec?.item?.name || "");
+            if (apiName && !failedApis.has(apiName)) passedApis.add(apiName);
+          }
         }
 
         const runUrl = `https://github.com/${process.env.REPOSITORY}/actions/runs/${process.env.RUN_ID}`;
-        let createdCount = 0;
-        let commentedCount = 0;
 
-        // Lấy danh sách bug CI/CD đang mở trước, sau đó so sánh bằng JS.
-        // Cách này tránh lỗi JQL khi summary có emoji, ngoặc [], dấu (), tiếng Việt.
+        // ── Load open CI/CD bugs from Jira ────────────────────────────────
         function getOpenCiBugs() {
-          // KHÔNG lọc theo labels, vì các bug cũ có thể chưa có label ci-cd/auto-detected.
-          // Chỉ lấy các issue đang mở trong project rồi lọc summary bằng JavaScript.
-          // Cách này tránh lỗi JQL khi summary có emoji, dấu ngoặc, tiếng Việt.
-          const jql =
-            `project = ${process.env.PROJECT_KEY} ` +
-            `AND statusCategory != Done`;
-
-          const url =
-            `${jiraBase}/rest/api/3/search/jql` +
-            `?jql=${encodeURIComponent(jql)}` +
-            `&maxResults=1000` +
-            `&fields=summary,status,labels,issuetype`;
-
+          const jql = `project = ${process.env.PROJECT_KEY} AND statusCategory != Done`;
+          const url = `${jiraBase}/rest/api/3/search/jql?jql=${encodeURIComponent(jql)}&maxResults=1000&fields=summary,status,labels,issuetype`;
           const res = curlJson("GET", url);
-
           if (res.errorMessages || res.errors) {
-            console.log("❌ Jira search error:", JSON.stringify(res).slice(0, 1000));
+            console.log("❌ Jira search error:", JSON.stringify(res).slice(0, 500));
             return [];
           }
-
-          const issues = res.issues || [];
-
-          return issues.filter(issue => {
-            const summary = normalizeText(issue?.fields?.summary || "");
-            const issueType = normalizeText(issue?.fields?.issuetype?.name || "").toLowerCase();
-
-            // Chỉ nhận bug CI/CD cũ hoặc mới, kể cả bug cũ không có label.
-            return issueType === "bug" && (
+          return (res.issues || []).filter(i => {
+            const summary = normalize(i?.fields?.summary || "");
+            const type    = normalize(i?.fields?.issuetype?.name || "").toLowerCase();
+            return type === "bug" && (
               summary.includes("[CI/CD]") ||
-              summary.includes("Lỗi API:") ||
+              summary.includes("Lỗi API:")  ||
               summary.includes("Loi API:")
             );
           });
@@ -265,115 +254,101 @@ jobs:
         console.log(`🔎 Found ${openCiBugs.length} open CI/CD bugs in Jira.`);
 
         function findExistingBug(bug) {
-          const targetSummary = normalizeText(bug.summary);
-          const targetApi = normalizeText(bug.apiName);
-          const targetModule = normalizeText(bug.moduleName);
-          const targetBugKey = bug.bugKey;
-
-          return openCiBugs.find(issue => {
-            const summary = normalizeText(issue?.fields?.summary || "");
-            const labels = issue?.fields?.labels || [];
-
-            // Ưu tiên bắt bằng label ổn định.
-            if (labels.includes(`api-${targetBugKey}`)) return true;
-
-            // Bắt bug cũ đã tạo trước đó bằng exact summary.
-            if (summary === targetSummary) return true;
-
-            // Bắt bug cũ không có emoji hoặc khác nhẹ prefix.
-            if (
-              summary.includes("[CI/CD]") &&
-              summary.includes(targetApi) &&
-              summary.includes(targetModule)
-            ) {
-              return true;
-            }
-
-            return false;
+          return openCiBugs.find(i => {
+            const summary = normalize(i?.fields?.summary || "");
+            const labels  = i?.fields?.labels || [];
+            return labels.includes(`api-${bug.bugKey}`)
+              || summary === normalize(bug.summary)
+              || (summary.includes("[CI/CD]") && summary.includes(bug.apiName) && summary.includes(bug.moduleName));
           }) || null;
         }
 
-        function makeAdfDoc(lines) {
-          const content = lines.map(line => ({
-            type: "paragraph",
-            content: [{ type: "text", text: line }]
-          }));
-          return { version: 1, type: "doc", content };
-        }
+        // ── Auto-close bugs whose API now passes ──────────────────────────
+        let closedCount = 0;
+        for (const issue of openCiBugs) {
+          const summary = normalize(issue?.fields?.summary || "");
+          const labels  = issue?.fields?.labels || [];
+          let matched   = false;
 
-        function commentExistingBug(issueKey, bug) {
-          const lines = [
-            `CI/CD vẫn phát hiện lỗi này trong lần chạy mới.`,
-            `API: ${bug.apiName}`,
-            `Bộ test: ${bug.moduleName}`,
-            `Lỗi: ${bug.errorMsg}`,
-            `Người chạy: ${process.env.ACTOR}`,
-            `Branch: ${process.env.BRANCH}`,
-            `GitHub Actions Run #${process.env.RUN_NUMBER}: ${runUrl}`,
-            `Report HTML: xem trong Artifacts của GitHub Actions.`
-          ];
-
-          curlJson("POST", `${jiraBase}/rest/api/3/issue/${issueKey}/comment`, {
-            body: makeAdfDoc(lines)
-          });
-          console.log(`💬 Bug đã tồn tại (${issueKey}) cho [${bug.apiName}], đã comment vào bug cũ.`);
-          commentedCount++;
-        }
-
-        function createNewBug(bug, index) {
-          const assigneeId = members.length > 0 ? members[index % members.length] : null;
-
-          const descLines = [
-            `Hệ thống kiểm thử tự động phát hiện API bị lỗi.`,
-            `Bộ kịch bản: ${bug.moduleName}`,
-            `Tên API: ${bug.apiName}`,
-            `Chi tiết lỗi: ${bug.errorMsg}`,
-            `---`,
-            `Người kích hoạt build: ${process.env.ACTOR}`,
-            `Nhánh code: ${process.env.BRANCH}`,
-            `GitHub Actions Run #${process.env.RUN_NUMBER}: ${runUrl}`,
-            `Báo cáo HTML: tải trong mục Artifacts trên GitHub Actions.`
-          ];
-
-          const jiraData = {
-            fields: {
-              project: { key: process.env.PROJECT_KEY },
-              summary: bug.summary,
-              description: makeAdfDoc(descLines),
-              issuetype: { name: "Bug" },
-              priority: { name: "High" },
-              labels: [
-                "ci-cd",
-                "postman",
-                "auto-detected",
-                `api-${bug.bugKey}`
-              ]
+          for (const apiName of passedApis) {
+            const bk = slugify(`Eyewear API-${apiName}`);
+            if (labels.includes(`api-${bk}`) || (summary.includes("[CI/CD]") && summary.includes(apiName))) {
+              matched = true;
+              break;
             }
-          };
-
-          if (assigneeId) {
-            jiraData.fields.assignee = { accountId: assigneeId };
           }
 
-          const res = curlJson("POST", `${jiraBase}/rest/api/3/issue`, jiraData);
-          if (res.key) {
-            console.log(`✅ Đã tạo Bug mới [${bug.apiName}] (${res.key})`);
-            createdCount++;
-          } else {
-            console.log(`❌ Không tạo được bug cho [${bug.apiName}]. Jira response:`, JSON.stringify(res).slice(0, 1000));
-          }
+          if (!matched) continue;
+
+          const transId = getDoneTransitionId(issue.key);
+          if (!transId) { console.log(`⚠️ Skip auto-close ${issue.key} — transition not found.`); continue; }
+
+          curlJson("POST", `${jiraBase}/rest/api/3/issue/${issue.key}/transitions`, { transition: { id: transId } });
+          curlJson("POST", `${jiraBase}/rest/api/3/issue/${issue.key}/comment`, {
+            body: adf([
+              "✅ CI/CD xác nhận API đã PASS. Bug được tự động đóng.",
+              `Branch: ${process.env.BRANCH}`,
+              `Người chạy: ${process.env.ACTOR}`,
+              `GitHub Actions Run #${process.env.RUN_NUMBER}: ${runUrl}`
+            ])
+          });
+          console.log(`✅ Auto-closed ${issue.key} — API đã pass.`);
+          closedCount++;
         }
+
+        // ── Handle failures ───────────────────────────────────────────────
+        let createdCount = 0, commentedCount = 0;
 
         for (const [index, bug] of failures.entries()) {
-          const existingBug = findExistingBug(bug);
-          if (existingBug) {
-            commentExistingBug(existingBug.key, bug);
+          const existing = findExistingBug(bug);
+
+          if (existing) {
+            curlJson("POST", `${jiraBase}/rest/api/3/issue/${existing.key}/comment`, {
+              body: adf([
+                "CI/CD vẫn phát hiện lỗi này trong lần chạy mới.",
+                `API: ${bug.apiName}`,
+                `Bộ test: ${bug.moduleName}`,
+                `Lỗi: ${bug.errorMsg}`,
+                `Người chạy: ${process.env.ACTOR}`,
+                `Branch: ${process.env.BRANCH}`,
+                `GitHub Actions Run #${process.env.RUN_NUMBER}: ${runUrl}`
+              ])
+            });
+            console.log(`💬 Commented on existing bug (${existing.key}) — [${bug.apiName}] still failing.`);
+            commentedCount++;
           } else {
-            createNewBug(bug, index);
+            const jiraData = {
+              fields: {
+                project: { key: process.env.PROJECT_KEY },
+                summary: bug.summary,
+                description: adf([
+                  "Hệ thống kiểm thử tự động phát hiện API bị lỗi.",
+                  `Bộ kịch bản: ${bug.moduleName}`,
+                  `Tên API: ${bug.apiName}`,
+                  `Chi tiết lỗi: ${bug.errorMsg}`,
+                  "---",
+                  `Người kích hoạt build: ${process.env.ACTOR}`,
+                  `Nhánh code: ${process.env.BRANCH}`,
+                  `GitHub Actions Run #${process.env.RUN_NUMBER}: ${runUrl}`,
+                  "Báo cáo HTML: tải trong mục Artifacts trên GitHub Actions."
+                ]),
+                issuetype: { name: "Bug" },
+                priority:  { name: "High" },
+                labels: ["ci-cd", "postman", "auto-detected", `api-${bug.bugKey}`],
+                assignee:  { accountId: members[index % members.length] }
+              }
+            };
+            const res = curlJson("POST", `${jiraBase}/rest/api/3/issue`, jiraData);
+            if (res.key) { console.log(`✅ Created bug [${bug.apiName}] → ${res.key}`); createdCount++; }
+            else { console.log(`❌ Failed to create bug [${bug.apiName}]:`, JSON.stringify(res).slice(0, 500)); }
           }
         }
 
-        console.log(`\n📌 Jira update done. Created: ${createdCount}, Commented existing: ${commentedCount}`);
+        if (failures.length === 0) {
+          console.log("✅ All APIs passed — no new bugs needed.");
+        }
+
+        console.log(`\n📌 Jira sync done. Created: ${createdCount} | Commented: ${commentedCount} | Auto-closed: ${closedCount}`);
         NODE
 
     - name: Upload Test Reports Artifacts
