@@ -54,30 +54,30 @@ jobs:
       # 5. Create backend .env for CI
       - name: Create .env file
         run: |
-          cat > backend/.env << 'ENVEOF'
-APP_NAME="Eyewear Backend"
-APP_ENV=testing
-APP_URL=http://127.0.0.1:8000
-APP_DEBUG=true
-API_PREFIX=/api
-JWT_SECRET=ci-test-secret-key-for-github-actions
-JWT_EXPIRE=1440
-DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_DATABASE=eyewear_system
-DB_USERNAME=root
-DB_PASSWORD=root
-CORS_ALLOWED_ORIGIN=http://127.0.0.1:5500
-MAIL_MAILER=smtp
-MAIL_HOST=127.0.0.1
-MAIL_PORT=1025
-MAIL_USERNAME=
-MAIL_PASSWORD=
-MAIL_ENCRYPTION=
-MAIL_FROM_ADDRESS=test@eyewear.local
-MAIL_FROM_NAME="Eyewear System CI"
-ENVEOF
+          echo 'APP_NAME=Eyewear Backend' > backend/.env
+          echo 'APP_ENV=testing' >> backend/.env
+          echo 'APP_URL=http://127.0.0.1:8000' >> backend/.env
+          echo 'APP_DEBUG=true' >> backend/.env
+          echo 'API_PREFIX=/api' >> backend/.env
+          echo 'JWT_SECRET=ci-test-secret-key-for-github-actions' >> backend/.env
+          echo 'JWT_EXPIRE=1440' >> backend/.env
+          echo 'DB_CONNECTION=mysql' >> backend/.env
+          echo 'DB_HOST=127.0.0.1' >> backend/.env
+          echo 'DB_PORT=3306' >> backend/.env
+          echo 'DB_DATABASE=eyewear_system' >> backend/.env
+          echo 'DB_USERNAME=root' >> backend/.env
+          echo 'DB_PASSWORD=root' >> backend/.env
+          echo 'CORS_ALLOWED_ORIGIN=http://127.0.0.1:5500' >> backend/.env
+          echo 'MAIL_MAILER=smtp' >> backend/.env
+          echo 'MAIL_HOST=127.0.0.1' >> backend/.env
+          echo 'MAIL_PORT=1025' >> backend/.env
+          echo 'MAIL_USERNAME=' >> backend/.env
+          echo 'MAIL_PASSWORD=' >> backend/.env
+          echo 'MAIL_ENCRYPTION=' >> backend/.env
+          echo 'MAIL_FROM_ADDRESS=test@eyewear.local' >> backend/.env
+          echo 'MAIL_FROM_NAME=Eyewear System CI' >> backend/.env
+          echo "Created .env file:"
+          cat backend/.env
 
       # 6. Import database schema
       - name: Import database schema
