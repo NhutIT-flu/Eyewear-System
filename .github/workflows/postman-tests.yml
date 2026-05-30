@@ -123,6 +123,18 @@ jobs:
         
         const auth = Buffer.from(`${process.env.JIRA_USER_EMAIL}:${process.env.JIRA_API_TOKEN}`).toString("base64");
         
+        // CHÚ Ý: Điền ID của các thành viên trong nhóm Jira vào mảng này
+        // Bạn có thể lấy Account ID của từng người bằng cách vào Jira -> Chọn 1 ticket bất kỳ -> Nhấp vào Assignee -> Nhìn vào URL hoặc gọi API.
+        const members = [
+          "712020:ba3687e1-2a5e-4f18-8594-07315b414728",
+          "712020:b2b9ed8a-a72a-43ae-8a12-1c5c7e599e08",
+          "712020:0ad5e210-883e-4449-8daa-2d3b51029e4d",
+          "712020:d335bfed-2162-4164-9e7f-172d5434d5b0",
+          "712020:9645f74c-0db2-4301-a77a-f0f57c6244fd",
+          "712020:83ddbb5b-a878-423a-8972-12137f84b4f3"
+        ];
+        
+        let totalBugCount = 0;
         const uniqueErrors = new Set();
         const failuresToProcess = [];
         
@@ -159,6 +171,13 @@ jobs:
         // Tiến hành bắn lệnh tạo thẻ đơn lẻ
         failuresToProcess.forEach((bug) => {
           
+          let assigneeObj = undefined;
+          if (members && members.length > 0) {
+            const assigneeId = members[totalBugCount % members.length];
+            assigneeObj = { id: assigneeId };
+            totalBugCount++;
+          }
+          
           const summary = `❌ [CI/CD] Lỗi API: ${bug.apiName} (${bug.moduleName})`;
           const description = `Hệ thống kiểm thử tự động phát hiện ca assert này bị gãy:\n\n` +
                               `* Bộ kịch bản: ${bug.moduleName}\n` +
@@ -178,6 +197,10 @@ jobs:
               priority: { name: "High" }
             }
           };
+          
+          if (assigneeObj) {
+            jiraData.fields.assignee = assigneeObj;
+          }
           
           try {
             const curlCommand = `curl -s -X POST -H "Authorization: Basic ${auth}" ` +

@@ -56,9 +56,6 @@ class AuthController extends BaseController
         }
 
         try {
-            // BUG CỐ TÌNH ĐỂ TEST JIRA TICKET: Luôn trả về HTTP 500
-            return ApiResponse::serverError('Cố tình làm lỗi API để Postman test thất bại');
-            
             $result = $this->authService->login($data);
             return ApiResponse::success([
                 'user' => $result['user'],
