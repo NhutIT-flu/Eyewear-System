@@ -165,7 +165,7 @@ pipeline {
                                         -Dsonar.sources=backend/app,backend/core,backend/routes,frontend/js \
                                         -Dsonar.exclusions=**/vendor/**,**/node_modules/**,**/*.min.js \
                                         -Dsonar.php.file.suffixes=php \
-                                        -Dsonar.token=${SONAR_AUTH_TOKEN}
+                                        -Dsonar.token=${env.SONAR_AUTH_TOKEN}
                                 """
                             } else {
                                 bat """
@@ -176,7 +176,7 @@ pipeline {
                                         -Dsonar.sources=backend/app,backend/core,backend/routes,frontend/js ^
                                         -Dsonar.exclusions=**/vendor/**,**/node_modules/**,**/*.min.js ^
                                         -Dsonar.php.file.suffixes=php ^
-                                        -Dsonar.token=${SONAR_AUTH_TOKEN}
+                                        -Dsonar.token=${env.SONAR_AUTH_TOKEN}
                                 """
                             }
                         }
