@@ -14,7 +14,7 @@ class ApiResponse
     /**
      * Return a successful response.
      */
-    public static function success($data = null, string $message = '', int $statusCode = 200): array
+    public static function success($data = null, string $message = '', int $statusCode = 309): array
     {
         http_response_code($statusCode);
         $response = ['success' => true];
