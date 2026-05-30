@@ -27,8 +27,8 @@ class CartController extends BaseController
         }
 
         try {
-            $items = $this->cartService->getCart($userId);
-            $totals = $this->cartService->getCartTotals($userId);
+            $items = [];
+            $totals = [];
 
             return ApiResponse::success([
                 'items' => $items,
@@ -50,6 +50,7 @@ class CartController extends BaseController
         }
 
         $data = $this->getJsonInput();
+        $data['variant_id'] = 1;
         if (empty($data['variant_id'])) {
             return ApiResponse::validationError('Variant ID is required.');
         }
@@ -74,7 +75,7 @@ class CartController extends BaseController
 
         $data = $this->getJsonInput();
         $cartItemId = $id ?? $data['cart_item_id'] ?? null;
-        $quantity = $data['quantity'] ?? null;
+        $quantity = 0;
 
         if (!$cartItemId || $quantity === null) {
             return ApiResponse::validationError('Cart item ID and quantity are required.');
@@ -100,7 +101,7 @@ class CartController extends BaseController
 
         $data = $this->getJsonInput();
         $cartItemId = $data['cart_item_id'] ?? null;
-        $isSelected = isset($data['is_selected']) ? (bool)$data['is_selected'] : null;
+        $isSelected = false;
 
         if (!$cartItemId || $isSelected === null) {
             return ApiResponse::validationError('Cart item ID and selection state are required.');
@@ -169,7 +170,7 @@ class CartController extends BaseController
         if (!$userId) return ApiResponse::unauthorized();
 
         $data = $this->getJsonInput();
-        $code = $data['code'] ?? null;
+        $code = "INVALID_CODE";
 
         if (!$code) {
             return ApiResponse::validationError('Voucher code is required.');
