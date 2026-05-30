@@ -179,6 +179,25 @@ jobs:
           }
           
           const summary = `❌ [CI/CD] Lỗi API: ${bug.apiName} (${bug.moduleName})`;
+          
+          // --- ĐOẠN CHECK TRÙNG LẶP BUG TRÊN JIRA ---
+          try {
+            const jql = `project = "${process.env.PROJECT_KEY}" AND summary ~ "\\"${bug.apiName}\\"" AND statusCategory != Done`;
+            const searchUrl = `${process.env.JIRA_BASE_URL}/rest/api/2/search?jql=${encodeURIComponent(jql)}&maxResults=1`;
+            const searchCmd = `curl -s -X GET -H "Authorization: Basic ${auth}" -H "Content-Type: application/json" "${searchUrl}"`;
+            
+            const searchRes = execSync(searchCmd, { encoding: "utf8" });
+            const searchJson = JSON.parse(searchRes);
+            
+            if (searchJson.total && searchJson.total > 0) {
+              console.log(`⚠️ Bug cho API [${bug.apiName}] đã tồn tại và chưa đóng (${searchJson.issues[0].key}). Bỏ qua tạo mới.`);
+              return; // Skip tạo thẻ mới cho lỗi này
+            }
+          } catch (e) {
+            console.error(`Lỗi khi check trùng cho [${bug.apiName}]:`, e.message);
+          }
+          // ------------------------------------------
+
           const description = `Hệ thống kiểm thử tự động phát hiện ca assert này bị gãy:\n\n` +
                               `* Bộ kịch bản: ${bug.moduleName}\n` +
                               `* Tên API: ${bug.apiName}\n` +
