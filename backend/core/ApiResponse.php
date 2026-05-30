@@ -14,8 +14,9 @@ class ApiResponse
     /**
      * Return a successful response.
      */
-    public static function success($data = null, string $message = '', int $statusCode = 309): array
+    public static function success($data = null, string $message = '', int $statusCode = 400): array
     {
+        // CỐ TÌNH ĐỔI THÀNH 400 ĐỂ TEST JIRA AUTO-TICKET (Mặc định là 200)
         http_response_code($statusCode);
         $response = ['success' => true];
         if ($data !== null) {
