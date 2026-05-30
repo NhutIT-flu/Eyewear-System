@@ -226,20 +226,39 @@ jobs:
         // Lấy danh sách bug CI/CD đang mở trước, sau đó so sánh bằng JS.
         // Cách này tránh lỗi JQL khi summary có emoji, ngoặc [], dấu (), tiếng Việt.
         function getOpenCiBugs() {
+          // KHÔNG lọc theo labels, vì các bug cũ có thể chưa có label ci-cd/auto-detected.
+          // Chỉ lấy các issue đang mở trong project rồi lọc summary bằng JavaScript.
+          // Cách này tránh lỗi JQL khi summary có emoji, dấu ngoặc, tiếng Việt.
           const jql =
             `project = ${process.env.PROJECT_KEY} ` +
-            `AND issuetype = Bug ` +
-            `AND statusCategory != Done ` +
-            `AND labels in ("ci-cd", "auto-detected")`;
+            `AND statusCategory != Done`;
 
           const url =
             `${jiraBase}/rest/api/2/search` +
             `?jql=${encodeURIComponent(jql)}` +
             `&maxResults=1000` +
-            `&fields=summary,status,labels`;
+            `&fields=summary,status,labels,issuetype`;
 
           const res = curlJson("GET", url);
-          return res.issues || [];
+
+          if (res.errorMessages || res.errors) {
+            console.log("❌ Jira search error:", JSON.stringify(res).slice(0, 1000));
+            return [];
+          }
+
+          const issues = res.issues || [];
+
+          return issues.filter(issue => {
+            const summary = normalizeText(issue?.fields?.summary || "");
+            const issueType = normalizeText(issue?.fields?.issuetype?.name || "").toLowerCase();
+
+            // Chỉ nhận bug CI/CD cũ hoặc mới, kể cả bug cũ không có label.
+            return issueType === "bug" && (
+              summary.includes("[CI/CD]") ||
+              summary.includes("Lỗi API:") ||
+              summary.includes("Loi API:")
+            );
+          });
         }
 
         const openCiBugs = getOpenCiBugs();
