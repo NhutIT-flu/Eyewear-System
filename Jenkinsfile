@@ -165,18 +165,18 @@ pipeline {
                                         -Dsonar.sources=backend/app,backend/core,backend/routes,frontend/js \
                                         -Dsonar.exclusions=**/vendor/**,**/node_modules/**,**/*.min.js \
                                         -Dsonar.php.file.suffixes=php \
-                                        -Dsonar.login=${SONAR_AUTH_TOKEN}
+                                        -Dsonar.token=${SONAR_AUTH_TOKEN}
                                 """
                             } else {
                                 bat """
                                     "${scannerHome}\\bin\\sonar-scanner.bat" ^
-                                        -Dsonar.projectKey=%SONAR_PROJECT_KEY% ^
-                                        -Dsonar.projectName="%SONAR_PROJECT_NAME%" ^
-                                        -Dsonar.projectVersion=1.0.%BUILD_NUMBER% ^
+                                        -Dsonar.projectKey=${SONAR_PROJECT_KEY} ^
+                                        -Dsonar.projectName="${SONAR_PROJECT_NAME}" ^
+                                        -Dsonar.projectVersion=1.0.${BUILD_NUMBER} ^
                                         -Dsonar.sources=backend/app,backend/core,backend/routes,frontend/js ^
                                         -Dsonar.exclusions=**/vendor/**,**/node_modules/**,**/*.min.js ^
                                         -Dsonar.php.file.suffixes=php ^
-                                        -Dsonar.login=%SONAR_AUTH_TOKEN%
+                                        -Dsonar.token=${SONAR_AUTH_TOKEN}
                                 """
                             }
                         }
