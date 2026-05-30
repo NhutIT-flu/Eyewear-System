@@ -1,19 +1,24 @@
-name: Postman API Tests & Jira Update
+name: Postman API Test Automation Pipeline
 
 on:
   push:
-    branches: [main, develop]
+    branches: [ "main", "develop" ]
   pull_request:
-    branches: [main, develop]
+    branches: [ "main", "develop" ]
 
-env:
-  JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
-  JIRA_EMAIL: ${{ secrets.JIRA_GMAIL }}
-  JIRA_API_TOKEN: ${{ secrets.JIRA_APIKEY }}
+# Hủy run cũ nếu có run mới hơn trên cùng nhánh (tiết kiệm tài nguyên)
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  api-tests:
+  # ============================================================
+  # JOB: NEWMAN API TEST + TẠO JIRA TICKET
+  # ============================================================
+  api-tests-and-jira:
+    name: Newman API Tests & Jira Bug Creation
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     services:
       mysql:
@@ -30,29 +35,19 @@ jobs:
           --health-retries=5
 
     steps:
-      # 1. Checkout code
-      - name: Checkout repository
+      - name: Checkout Repository Code
         uses: actions/checkout@v4
 
-      # 2. Setup PHP
+      # ----------------------------------------------------------
+      # BƯỚC 1: CÀI ĐẶT MÔI TRƯỜNG PHP & MYSQL
+      # ----------------------------------------------------------
       - name: Setup PHP 8.3
         uses: shivammathur/setup-php@v2
         with:
-          php-version: "8.3"
+          php-version: '8.3'
           extensions: pdo, pdo_mysql, mbstring, openssl
 
-      # 3. Install Node.js (for Newman)
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      # 4. Install Newman (Postman CLI runner)
-      - name: Install Newman
-        run: npm install -g newman newman-reporter-htmlextra
-
-      # 5. Create backend .env for CI
-      - name: Create .env file
+      - name: Create .env file for CI
         run: |
           echo 'APP_NAME=Eyewear Backend' > backend/.env
           echo 'APP_ENV=testing' >> backend/.env
@@ -76,16 +71,12 @@ jobs:
           echo 'MAIL_ENCRYPTION=' >> backend/.env
           echo 'MAIL_FROM_ADDRESS=test@eyewear.local' >> backend/.env
           echo 'MAIL_FROM_NAME=Eyewear System CI' >> backend/.env
-          echo "Created .env file:"
-          cat backend/.env
 
-      # 6. Import database schema
       - name: Import database schema
         continue-on-error: true
         run: |
-          mysql -h 127.0.0.1 -u root -proot eyewear_system < backend/database/schema.sql && echo "Schema imported OK" || echo "Schema import failed, continuing..."
+          mysql -h 127.0.0.1 -u root -proot eyewear_system < backend/database/schema.sql || echo "Schema import failed, continuing..."
 
-      # 7. Start PHP built-in server
       - name: Start PHP backend server
         run: |
           php -S 127.0.0.1:8000 -t backend/public &
@@ -110,11 +101,26 @@ jobs:
             exit 1
           fi
 
-      # 8. Run Postman collection via Newman
+      # ----------------------------------------------------------
+      # BƯỚC 2: CÀI ĐẶT NODE.JS VỚI CACHE
+      # ----------------------------------------------------------
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Newman & HTML Reporter
+        run: npm install -g newman newman-reporter-htmlextra
+
+      - name: Create Reports Directory
+        run: mkdir -p reports
+
+      # ----------------------------------------------------------
+      # BƯỚC 3: CHẠY NEWMAN (Ghi nhận lỗi thay vì dừng pipeline)
+      # ----------------------------------------------------------
       - name: Run Postman API Tests
         run: |
-          mkdir -p reports
-          echo "Starting Newman tests..."
           newman run "Eyewear-System.postman_collection.json" \
             --env-var "baseUrl=http://127.0.0.1:8000/api/v1" \
             --reporters cli,htmlextra,json \
@@ -123,32 +129,11 @@ jobs:
             --reporter-json-export reports/test-results.json \
             --timeout-request 10000 \
             --delay-request 500 \
-            --bail || echo "⚠️ Newman tests completed with status: $?"
+            || echo "NEWMAN_FAILED=true" >> $GITHUB_ENV
 
-          # Verify reports were created
-          echo "Checking if reports exist..."
-          if [ ! -f reports/test-report.html ]; then
-            echo "❌ ERROR: test-report.html was NOT created!"
-            exit 1
-          fi
-          if [ ! -f reports/test-results.json ]; then
-            echo "❌ ERROR: test-results.json was NOT created!"
-            exit 1
-          fi
-          echo "✅ All reports created successfully!"
-          ls -lah reports/
-
-      # 9. Upload test report as artifact
-      - name: Upload Test Report
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: postman-test-report
-          path: reports/
-          if-no-files-found: error
-          retention-days: 30
-
-      # 10. Comment kết quả lên Pull Request (nếu là PR)
+      # ----------------------------------------------------------
+      # BƯỚC 4: PARSE BÁO CÁO VÀ TẠO JIRA TICKET (Luôn chạy)
+      # ----------------------------------------------------------
       - name: Comment test results on PR
         if: github.event_name == 'pull_request' && always()
         uses: actions/github-script@v7
@@ -163,10 +148,6 @@ jobs:
               const failed = stats.assertions.failed;
               const emoji = failed === 0 ? '✅' : '❌';
               summary += `${emoji} **${passed}/${stats.assertions.total} tests passed**\n\n`;
-              summary += `| Metric | Value |\n|---|---|\n`;
-              summary += `| Total Requests | ${stats.requests.total} |\n`;
-              summary += `| Passed | ${passed} |\n`;
-              summary += `| Failed | ${failed} |\n`;
               if (failed > 0) {
                 summary += '\n### ❌ Failed Tests\n';
                 results.run.failures.forEach(f => {
@@ -183,7 +164,6 @@ jobs:
               body: summary
             });
 
-      # 11. Parse report và cập nhật tất cả Jira tickets liên quan
       - name: Report results to Jira
         if: always()
         env:
@@ -192,63 +172,56 @@ jobs:
           COMMIT_SHA: ${{ github.sha }}
           RUN_ID: ${{ github.run_id }}
         run: |
-          # Verify reports exist
           if [ ! -f reports/test-results.json ]; then
             echo "⚠️ WARNING: reports/test-results.json not found! Skipping Jira update."
-            echo "Available files:"
-            ls -la reports/ 2>/dev/null || echo "reports/ directory does not exist"
             exit 0
           fi
 
-          # Đọc kết quả test
-          if [ -f reports/test-results.json ]; then
-            TOTAL=$(cat reports/test-results.json | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['run']['stats']['assertions']['total'])" 2>/dev/null || echo "?")
-            FAILED=$(cat reports/test-results.json | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['run']['stats']['assertions']['failed'])" 2>/dev/null || echo "?")
-            PASSED=$(( ${TOTAL:-0} - ${FAILED:-0} ))
-            STATUS_EMOJI="✅"
-            [ "${FAILED}" != "0" ] && STATUS_EMOJI="❌"
-          else
-            TOTAL="N/A"; FAILED="N/A"; PASSED="N/A"; STATUS_EMOJI="⚠️"
-          fi
+          TOTAL=$(cat reports/test-results.json | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['run']['stats']['assertions']['total'])" 2>/dev/null || echo "?")
+          FAILED=$(cat reports/test-results.json | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['run']['stats']['assertions']['failed'])" 2>/dev/null || echo "?")
+          PASSED=$(( ${TOTAL:-0} - ${FAILED:-0} ))
+          STATUS_EMOJI="✅"; [ "${FAILED}" != "0" ] && STATUS_EMOJI="❌"
 
           REPORT_URL="https://github.com/${{ github.repository }}/actions/runs/${RUN_ID}"
           SHORT_SHA="${COMMIT_SHA:0:7}"
 
           post_comment() {
-            ISSUE_KEY="$1"
-            MSG="$2"
-            curl -s -X POST \
-              "${JIRA_URL}/rest/api/3/issue/${ISSUE_KEY}/comment" \
-              -u "${JIRA_AUTH}" \
-              -H "Content-Type: application/json" \
-              -d "{\"body\":{\"type\":\"doc\",\"version\":1,\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"${MSG}\"}]}]}}" \
-              -o /dev/null && echo "✅ Commented on ${ISSUE_KEY}" || echo "⚠️ Failed to comment on ${ISSUE_KEY}"
+            curl -s -X POST "$1/rest/api/3/issue/$2/comment" \
+              -u "$3" -H "Content-Type: application/json" \
+              -d "{\"body\":{\"type\":\"doc\",\"version\":1,\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"$4\"}]}]}}" \
+              -o /dev/null && echo "✅ Commented on $2" || echo "⚠️ Failed to comment on $2"
           }
 
-          # ── ESQ-7: Complete Login API ─────────────────────────────
-          post_comment "ESQ-7" \
-            "${STATUS_EMOJI} CI Build #${RUN_ID} | Commit ${SHORT_SHA} | Tests: ${PASSED}/${TOTAL} passed, ${FAILED} failed | Report: ${REPORT_URL}"
+          # ESQ-7: Complete Login API
+          post_comment "$JIRA_URL" "ESQ-7" "$JIRA_AUTH" "${STATUS_EMOJI} CI Build #${RUN_ID} | Commit ${SHORT_SHA} | Tests: ${PASSED}/${TOTAL} passed, ${FAILED} failed | Report: ${REPORT_URL}"
 
-          # ── ESQ-51: BUG Token Forgery ────────────────────────────
-          if [ -f reports/test-results.json ]; then
-            TOKEN_BUG=$(cat reports/test-results.json | python3 -c "
-          import sys,json
-          d=json.load(sys.stdin)
-          fails=[f['source']['name'] for f in d['run'].get('failures',[]) if 'token' in f['source']['name'].lower() or 'auth' in f['source']['name'].lower()]
-          print('FAIL' if fails else 'PASS')
-          " 2>/dev/null || echo "UNKNOWN")
-            if [ "$TOKEN_BUG" = "FAIL" ]; then
-              post_comment "ESQ-51" \
-                "❌ CI Build #${RUN_ID} | Token security test FAILED on commit ${SHORT_SHA} — Bug still present. Report: ${REPORT_URL}"
-            else
-              post_comment "ESQ-51" \
-                "✅ CI Build #${RUN_ID} | Token security test passed on commit ${SHORT_SHA}. Report: ${REPORT_URL}"
-            fi
+          # ESQ-51: BUG Token Forgery
+          TOKEN_BUG=$(cat reports/test-results.json | python3 -c "import sys,json; d=json.load(sys.stdin); print('FAIL' if any('token' in f['source']['name'].lower() or 'auth' in f['source']['name'].lower() for f in d['run'].get('failures',[])) else 'PASS')" 2>/dev/null || echo "UNKNOWN")
+          if [ "$TOKEN_BUG" = "FAIL" ]; then
+            post_comment "$JIRA_URL" "ESQ-51" "$JIRA_AUTH" "❌ CI Build #${RUN_ID} | Token security test FAILED on commit ${SHORT_SHA} — Bug still present. Report: ${REPORT_URL}"
+          else
+            post_comment "$JIRA_URL" "ESQ-51" "$JIRA_AUTH" "✅ CI Build #${RUN_ID} | Token security test passed on commit ${SHORT_SHA}. Report: ${REPORT_URL}"
           fi
 
-          # ── Tạo Jira ticket mới cho từng test FAIL ────────────────
-          if [ -f reports/test-results.json ]; then
-            python3 scripts/jira_report.py
-          fi
+          # Tự động tạo Bug ticket cho từng test fail
+          python3 scripts/jira_report.py
 
-          echo "Jira reporting complete."
+      # ----------------------------------------------------------
+      # BƯỚC 5: UPLOAD ARTIFACTS
+      # ----------------------------------------------------------
+      - name: Upload Test Reports Artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: postman-test-report
+          path: reports/
+          retention-days: 14
+
+      # ----------------------------------------------------------
+      # BƯỚC 6: FAIL JOB NẾU CÓ LỖI TỪ NEWMAN
+      # ----------------------------------------------------------
+      - name: Check Newman Status
+        if: env.NEWMAN_FAILED == 'true'
+        run: |
+          echo "❌ API tests failed. Please check the reports."
+          exit 1
