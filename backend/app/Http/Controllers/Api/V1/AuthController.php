@@ -57,9 +57,11 @@ class AuthController extends BaseController
 
         try {
             $result = $this->authService->login($data);
+            
+            // BUG CỐ TÌNH ĐỂ TEST JIRA TICKET: Xóa token trong response
             return ApiResponse::success([
                 'user' => $result['user'],
-                'token' => $result['token'],
+                'token' => null, // Cố tình làm sai
             ], 'Login successful');
         } catch (Exception $e) {
             $message = $e->getMessage();
@@ -190,4 +192,4 @@ class AuthController extends BaseController
         header("Location: {$frontendUrl}{$path}");
         exit;
     }
-}
+}
