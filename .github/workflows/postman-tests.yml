@@ -28,9 +28,6 @@ jobs:
     - name: Checkout Repository Code
       uses: actions/checkout@v4
 
-    # =======================================================================
-    # BƯỚC 1: KHỞI TẠO MÔI TRƯỜNG PHP & MYSQL CHO BACKEND
-    # =======================================================================
     - name: Setup PHP 8.3
       uses: shivammathur/setup-php@v2
       with:
@@ -73,9 +70,6 @@ jobs:
           sleep 2
         done
 
-    # =======================================================================
-    # BƯỚC 2: KHỞI TẠO NODE.JS ĐỂ CHẠY NEWMAN API TEST
-    # =======================================================================
     - name: Setup Node.js Environment
       uses: actions/setup-node@v4
       with:
@@ -89,9 +83,6 @@ jobs:
     - name: Create Reports Directory
       run: mkdir -p postman-reports
 
-    # =======================================================================
-    # BƯỚC 3: CHẠY POSTMAN COLLECTION BẰNG NEWMAN
-    # =======================================================================
     - name: Run Eyewear API Tests
       run: |
         newman run "Eyewear-System.postman_collection.json" \
@@ -101,12 +92,13 @@ jobs:
           --reporter-json-export ./postman-reports/summary-eyewear.json \
           --suppress-exit-code
 
-    # =======================================================================
-    # BƯỚC 4: JIRA BUG DEDUPLICATION
-    # Nếu bug đã tồn tại và chưa DONE => chỉ comment, không tạo bug mới.
-    # Nếu chưa có bug đang mở => tạo bug mới.
-    # =======================================================================
+    # ==========================================================
+    # JIRA BUG DEDUPLICATION
+    # - Nếu bug cùng API đang mở đã tồn tại: chỉ comment vào bug cũ.
+    # - Nếu chưa tồn tại: mới tạo bug.
+    # ==========================================================
     - name: Update Jira Bugs Without Duplicates
+      if: always()
       env:
         JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
         JIRA_USER_EMAIL: ${{ secrets.JIRA_GMAIL }}
@@ -134,7 +126,10 @@ jobs:
           }
         }
 
-        const auth = Buffer.from(`${process.env.JIRA_USER_EMAIL}:${process.env.JIRA_API_TOKEN}`).toString("base64");
+        const auth = Buffer
+          .from(`${process.env.JIRA_USER_EMAIL}:${process.env.JIRA_API_TOKEN}`)
+          .toString("base64");
+
         const jiraBase = process.env.JIRA_BASE_URL.replace(/\/$/, "");
 
         const members = [
@@ -147,11 +142,16 @@ jobs:
 
         function curlJson(method, url, body = null) {
           const bodyPart = body ? `-d @-` : "";
-          const cmd = `curl -s -X ${method} -H "Authorization: Basic ${auth}" -H "Content-Type: application/json" ${bodyPart} "${url}"`;
+          const cmd =
+            `curl -s -X ${method} ` +
+            `-H "Authorization: Basic ${auth}" ` +
+            `-H "Content-Type: application/json" ` +
+            `${bodyPart} "${url}"`;
+
           const output = execSync(cmd, {
             input: body ? JSON.stringify(body) : undefined,
             encoding: "utf8",
-            maxBuffer: 1024 * 1024 * 10
+            maxBuffer: 1024 * 1024 * 20
           });
 
           if (!output || output.trim() === "") return {};
@@ -170,8 +170,18 @@ jobs:
             .trim();
         }
 
-        function escapeJqlText(value) {
-          return normalizeText(value).replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+        function escapeJql(value) {
+          return String(value || "")
+            .replace(/\\/g, "\\\\")
+            .replace(/"/g, '\\"');
+        }
+
+        function slugify(value) {
+          return normalizeText(value)
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/^-+|-+$/g, "")
+            .slice(0, 60);
         }
 
         const failures = [];
@@ -186,17 +196,21 @@ jobs:
           for (const fail of runFailures) {
             const apiName = normalizeText(fail?.source?.name || "Unknown API");
             const errorMsg = normalizeText(fail?.error?.message || "Assertion failed");
-            const errorKey = `${item.name}|||${apiName}|||${errorMsg}`;
 
-            if (!uniqueErrors.has(errorKey)) {
-              uniqueErrors.add(errorKey);
-              failures.push({
-                moduleName: item.name,
-                apiName,
-                errorMsg,
-                summary: `❌ [CI/CD] Lỗi API: ${apiName} (${item.name})`
-              });
-            }
+            // Chống trùng trong cùng 1 lần chạy.
+            const errorKey = `${item.name}|||${apiName}|||${errorMsg}`;
+            if (uniqueErrors.has(errorKey)) continue;
+            uniqueErrors.add(errorKey);
+
+            const bugKey = slugify(`${item.name}-${apiName}`);
+
+            failures.push({
+              moduleName: item.name,
+              apiName,
+              errorMsg,
+              bugKey,
+              summary: `❌ [CI/CD] Lỗi API: ${apiName} (${item.name})`
+            });
           }
         }
 
@@ -209,14 +223,55 @@ jobs:
         let createdCount = 0;
         let commentedCount = 0;
 
-        function findOpenBugBySummary(summary) {
-          const jql = `project = "${process.env.PROJECT_KEY}" AND issuetype = Bug AND statusCategory != Done AND summary ~ "${escapeJqlText(summary)}"`;
-          const url = `${jiraBase}/rest/api/2/search?jql=${encodeURIComponent(jql)}&maxResults=20&fields=summary,status`;
-          const res = curlJson("GET", url);
-          const issues = res.issues || [];
+        // Lấy danh sách bug CI/CD đang mở trước, sau đó so sánh bằng JS.
+        // Cách này tránh lỗi JQL khi summary có emoji, ngoặc [], dấu (), tiếng Việt.
+        function getOpenCiBugs() {
+          const jql =
+            `project = ${process.env.PROJECT_KEY} ` +
+            `AND issuetype = Bug ` +
+            `AND statusCategory != Done ` +
+            `AND labels in ("ci-cd", "auto-detected")`;
 
-          // Ưu tiên match chính xác summary để tránh bắt nhầm bug khác.
-          return issues.find(issue => issue?.fields?.summary === summary) || issues[0] || null;
+          const url =
+            `${jiraBase}/rest/api/2/search` +
+            `?jql=${encodeURIComponent(jql)}` +
+            `&maxResults=1000` +
+            `&fields=summary,status,labels`;
+
+          const res = curlJson("GET", url);
+          return res.issues || [];
+        }
+
+        const openCiBugs = getOpenCiBugs();
+        console.log(`🔎 Found ${openCiBugs.length} open CI/CD bugs in Jira.`);
+
+        function findExistingBug(bug) {
+          const targetSummary = normalizeText(bug.summary);
+          const targetApi = normalizeText(bug.apiName);
+          const targetModule = normalizeText(bug.moduleName);
+          const targetBugKey = bug.bugKey;
+
+          return openCiBugs.find(issue => {
+            const summary = normalizeText(issue?.fields?.summary || "");
+            const labels = issue?.fields?.labels || [];
+
+            // Ưu tiên bắt bằng label ổn định.
+            if (labels.includes(`api-${targetBugKey}`)) return true;
+
+            // Bắt bug cũ đã tạo trước đó bằng exact summary.
+            if (summary === targetSummary) return true;
+
+            // Bắt bug cũ không có emoji hoặc khác nhẹ prefix.
+            if (
+              summary.includes("[CI/CD]") &&
+              summary.includes(targetApi) &&
+              summary.includes(targetModule)
+            ) {
+              return true;
+            }
+
+            return false;
+          }) || null;
         }
 
         function commentExistingBug(issueKey, bug) {
@@ -256,7 +311,12 @@ jobs:
               description,
               issuetype: { name: "Bug" },
               priority: { name: "High" },
-              labels: ["ci-cd", "postman", "auto-detected"]
+              labels: [
+                "ci-cd",
+                "postman",
+                "auto-detected",
+                `api-${bug.bugKey}`
+              ]
             }
           };
 
@@ -273,21 +333,18 @@ jobs:
           }
         }
 
-        failures.forEach((bug, index) => {
-          const existingBug = findOpenBugBySummary(bug.summary);
+        for (const [index, bug] of failures.entries()) {
+          const existingBug = findExistingBug(bug);
           if (existingBug) {
             commentExistingBug(existingBug.key, bug);
           } else {
             createNewBug(bug, index);
           }
-        });
+        }
 
         console.log(`\n📌 Jira update done. Created: ${createdCount}, Commented existing: ${commentedCount}`);
         NODE
 
-    # ==========================================
-    # ĐẨY BÁO CÁO LÊN ARTIFACTS
-    # ==========================================
     - name: Upload Test Reports Artifacts
       uses: actions/upload-artifact@v4
       if: always()
