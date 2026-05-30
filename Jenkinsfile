@@ -152,7 +152,7 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 echo '📊 Running SonarQube code quality analysis...'
-                withCredentials([string(credentialsId: 'SONAR_TOKEN', variable: 'SONAR_AUTH_TOKEN')]) {
+                withCredentials([string(credentialsId: 'SONAR_TOKEN', variable: 'SONAR_TOKEN')]) {
                     withSonarQubeEnv('SonarQube') {
                         script {
                             def scannerHome = tool 'sonar-scanner'
@@ -164,7 +164,8 @@ pipeline {
                                         -Dsonar.projectVersion=1.0.${BUILD_NUMBER} \
                                         -Dsonar.sources=backend/app,backend/core,backend/routes,frontend/js \
                                         -Dsonar.exclusions=**/vendor/**,**/node_modules/**,**/*.min.js \
-                                        -Dsonar.php.file.suffixes=php
+                                        -Dsonar.php.file.suffixes=php \
+                                        -Dsonar.token=\$SONAR_TOKEN
                                 """
                             } else {
                                 bat """
@@ -174,7 +175,8 @@ pipeline {
                                         -Dsonar.projectVersion=1.0.${BUILD_NUMBER} ^
                                         -Dsonar.sources=backend/app,backend/core,backend/routes,frontend/js ^
                                         -Dsonar.exclusions=**/vendor/**,**/node_modules/**,**/*.min.js ^
-                                        -Dsonar.php.file.suffixes=php
+                                        -Dsonar.php.file.suffixes=php ^
+                                        -Dsonar.token=%SONAR_TOKEN%
                                 """
                             }
                         }
