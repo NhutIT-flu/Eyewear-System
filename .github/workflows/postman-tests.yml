@@ -91,12 +91,30 @@ jobs:
           php -S 127.0.0.1:8000 -t backend/public &
           echo "Waiting for server to start..."
           sleep 3
-          curl -f http://127.0.0.1:8000/api/v1/health || echo "Health check failed, continuing..."
+          
+          # Verify server is actually running
+          MAX_RETRIES=5
+          RETRY_COUNT=0
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            if curl -f http://127.0.0.1:8000/api/v1/health > /dev/null 2>&1; then
+              echo "✅ Server is running and responding!"
+              break
+            fi
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            echo "⏳ Server not ready yet ($RETRY_COUNT/$MAX_RETRIES), waiting..."
+            sleep 2
+          done
+          
+          if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
+            echo "❌ ERROR: Server failed to start after $MAX_RETRIES attempts!"
+            exit 1
+          fi
 
       # 8. Run Postman collection via Newman
       - name: Run Postman API Tests
         run: |
           mkdir -p reports
+          echo "Starting Newman tests..."
           newman run "Eyewear-System.postman_collection.json" \
             --env-var "baseUrl=http://127.0.0.1:8000/api/v1" \
             --reporters cli,htmlextra,json \
@@ -105,7 +123,20 @@ jobs:
             --reporter-json-export reports/test-results.json \
             --timeout-request 10000 \
             --delay-request 500 \
-            --bail || true
+            --bail || echo "⚠️ Newman tests completed with status: $?"
+          
+          # Verify reports were created
+          echo "Checking if reports exist..."
+          if [ ! -f reports/test-report.html ]; then
+            echo "❌ ERROR: test-report.html was NOT created!"
+            exit 1
+          fi
+          if [ ! -f reports/test-results.json ]; then
+            echo "❌ ERROR: test-results.json was NOT created!"
+            exit 1
+          fi
+          echo "✅ All reports created successfully!"
+          ls -lah reports/
 
       # 9. Upload test report as artifact
       - name: Upload Test Report
@@ -113,9 +144,8 @@ jobs:
         if: always()
         with:
           name: postman-test-report
-          path: |
-            reports/test-report.html
-            reports/test-results.json
+          path: reports/
+          if-no-files-found: error
           retention-days: 30
 
       # 10. Comment kết quả lên Pull Request (nếu là PR)
@@ -162,6 +192,14 @@ jobs:
           COMMIT_SHA: ${{ github.sha }}
           RUN_ID: ${{ github.run_id }}
         run: |
+          # Verify reports exist
+          if [ ! -f reports/test-results.json ]; then
+            echo "⚠️ WARNING: reports/test-results.json not found! Skipping Jira update."
+            echo "Available files:"
+            ls -la reports/ 2>/dev/null || echo "reports/ directory does not exist"
+            exit 0
+          fi
+          
           # Đọc kết quả test
           if [ -f reports/test-results.json ]; then
             TOTAL=$(cat reports/test-results.json | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['run']['stats']['assertions']['total'])" 2>/dev/null || echo "?")
