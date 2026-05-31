@@ -153,6 +153,8 @@
         "type": "text/javascript",
         "exec": [
           "if (!pm.collectionVariables.get('baseUrl')) { pm.collectionVariables.set('baseUrl', 'http://localhost:8000/api/v1'); }",
+          "// Init negative test flag if not set",
+          "if (!pm.collectionVariables.has('_isNegativeTest')) { pm.collectionVariables.set('_isNegativeTest', 'false'); }",
           "function upsertHeader(key, value) { if (value) pm.request.headers.upsert({ key, value }); }",
           "const tokenName = pm.request.headers.get('X-Auth-Token-Var');",
           "if (tokenName) { const token = pm.collectionVariables.get(tokenName); if (token) upsertHeader('Authorization', 'Bearer ' + token); pm.request.headers.remove('X-Auth-Token-Var'); }"
@@ -164,20 +166,26 @@
       "script": {
         "type": "text/javascript",
         "exec": [
-          "pm.test('HTTP status is Successful (200, 201, 204)', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]); });",
-          "let json = null; try { json = pm.response.json(); } catch (e) {}",
-          "if (json) pm.test('Response is valid JSON', function () { pm.expect(json).to.be.an('object'); });",
-          "function dig(obj, keys) { if (!obj || typeof obj !== 'object') return undefined; for (const key of keys) { if (Object.prototype.hasOwnProperty.call(obj, key)) return obj[key]; } if (obj.data && typeof obj.data === 'object') return dig(obj.data, keys); return undefined; }",
-          "function firstArray(obj) { if (Array.isArray(obj)) return obj; if (obj && Array.isArray(obj.data)) return obj.data; if (obj && obj.data && Array.isArray(obj.data.data)) return obj.data.data; if (obj && obj.data && Array.isArray(obj.data.items)) return obj.data.items; if (obj && Array.isArray(obj.items)) return obj.items; return []; }",
-          "function setIf(name, value) { if (value !== undefined && value !== null && value !== '') pm.collectionVariables.set(name, String(value)); }",
-          "if (json) { const data = json.data || json; setIf('productId', dig(data, ['product_id','id'])); setIf('variantId', dig(data, ['variant_id','first_variant_id'])); setIf('orderId', dig(data, ['order_id','id'])); setIf('paymentId', dig(data, ['payment_id','id'])); setIf('ticketId', dig(data, ['ticket_id','id'])); setIf('voucherId', dig(data, ['voucher_id','id'])); setIf('addressId', dig(data, ['address_id','id'])); setIf('shipmentId', dig(data, ['shipment_id','id'])); const arr = firstArray(json); if (arr.length && arr[0]) { setIf('productId', arr[0].product_id || arr[0].id); setIf('variantId', arr[0].variant_id || arr[0].productvariant_id || arr[0].first_variant_id); setIf('orderId', arr[0].order_id || arr[0].id); setIf('paymentId', arr[0].payment_id || arr[0].id); setIf('ticketId', arr[0].ticket_id || arr[0].id); setIf('voucherId', arr[0].voucher_id || arr[0].id); setIf('addressId', arr[0].address_id || arr[0].id); setIf('shipmentId', arr[0].shipment_id || arr[0].id); } }",
-          "// Advanced QA Schema Validation (Dynamic)",
-          "if (pm.response.code === 200 || pm.response.code === 201) {",
-          "    const body = pm.response.json();",
-          "    if (body.data && Array.isArray(body.data)) {",
-          "        pm.test('Data array should not contain null items', function() {",
-          "            pm.expect(body.data.every(item => item !== null)).to.be.true;",
-          "        });",
+          "// Skip global status check if this is a negative test case",
+          "const isNegative = pm.collectionVariables.get('_isNegativeTest') === 'true';",
+          "if (isNegative) {",
+          "    pm.collectionVariables.set('_isNegativeTest', 'false');",
+          "} else {",
+          "    pm.test('HTTP status is Successful (200, 201, 204)', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]); });",
+          "    let json = null; try { json = pm.response.json(); } catch (e) {}",
+          "    if (json) pm.test('Response is valid JSON', function () { pm.expect(json).to.be.an('object'); });",
+          "    function dig(obj, keys) { if (!obj || typeof obj !== 'object') return undefined; for (const key of keys) { if (Object.prototype.hasOwnProperty.call(obj, key)) return obj[key]; } if (obj.data && typeof obj.data === 'object') return dig(obj.data, keys); return undefined; }",
+          "    function firstArray(obj) { if (Array.isArray(obj)) return obj; if (obj && Array.isArray(obj.data)) return obj.data; if (obj && obj.data && Array.isArray(obj.data.data)) return obj.data.data; if (obj && obj.data && Array.isArray(obj.data.items)) return obj.data.items; if (obj && Array.isArray(obj.items)) return obj.items; return []; }",
+          "    function setIf(name, value) { if (value !== undefined && value !== null && value !== '') pm.collectionVariables.set(name, String(value)); }",
+          "    if (json) { const data = json.data || json; setIf('productId', dig(data, ['product_id','id'])); setIf('variantId', dig(data, ['variant_id','first_variant_id'])); setIf('orderId', dig(data, ['order_id','id'])); setIf('paymentId', dig(data, ['payment_id','id'])); setIf('ticketId', dig(data, ['ticket_id','id'])); setIf('voucherId', dig(data, ['voucher_id','id'])); setIf('addressId', dig(data, ['address_id','id'])); setIf('shipmentId', dig(data, ['shipment_id','id'])); const arr = firstArray(json); if (arr.length && arr[0]) { setIf('productId', arr[0].product_id || arr[0].id); setIf('variantId', arr[0].variant_id || arr[0].productvariant_id || arr[0].first_variant_id); setIf('orderId', arr[0].order_id || arr[0].id); setIf('paymentId', arr[0].payment_id || arr[0].id); setIf('ticketId', arr[0].ticket_id || arr[0].id); setIf('voucherId', arr[0].voucher_id || arr[0].id); setIf('addressId', arr[0].address_id || arr[0].id); setIf('shipmentId', arr[0].shipment_id || arr[0].id); } }",
+          "    // Advanced QA Schema Validation (Dynamic)",
+          "    if (json && (pm.response.code === 200 || pm.response.code === 201)) {",
+          "        const body = json;",
+          "        if (body.data && Array.isArray(body.data)) {",
+          "            pm.test('Data array should not contain null items', function() {",
+          "                pm.expect(body.data.every(item => item !== null)).to.be.true;",
+          "            });",
+          "        }",
           "    }",
           "}"
         ]
@@ -779,6 +787,15 @@
                   "pm.test('Response has error message', function () { var jsonData = pm.response.json(); pm.expect(jsonData).to.have.property('success', false); });"
                 ]
               }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('_isNegativeTest', 'true');"
+                ]
+              }
             }
           ],
           "request": {
@@ -805,6 +822,15 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('Status code is 422 Unprocessable Entity', function () { pm.expect(pm.response.code).to.eql(422); });"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('_isNegativeTest', 'true');"
                 ]
               }
             }
@@ -3144,6 +3170,15 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('Status code is 403 Forbidden', function () { pm.expect(pm.response.code).to.be.oneOf([401, 403]); });"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('_isNegativeTest', 'true');"
                 ]
               }
             }
