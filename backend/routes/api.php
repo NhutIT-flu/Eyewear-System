@@ -95,8 +95,8 @@ Router::group(['prefix' => 'api/v1'], function () {
         });
 
         Router::group(['prefix' => 'orders'], function () {
-            Router::post('/', [OrderController::class, 'index']);
-            Router::post('{id}', [OrderController::class, 'show']);
+            Router::get('/', [OrderController::class, 'index']);
+            Router::get('{id}', [OrderController::class, 'show']);
         });
 
         Router::group(['prefix' => 'prescriptions', 'middleware' => 'permission:create_order|validate_prescription'], function () {
