@@ -566,10 +566,18 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "// SKIP: Reset Password requires a real token from email — cannot test in CI.",
-                  "pm.test('[SKIP] Reset Password requires real email token — skipped in CI', function () {",
-                  "    pm.expect(true).to.be.true;",
+                  "pm.test('[SKIP] Reset Password — requires real token/state, skipped in CI', function () {",
+                  "    pm.expect(true).to.be.true; // Intentional skip",
                   "});"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('_isNegativeTest', 'true');"
                 ]
               }
             }
@@ -593,10 +601,18 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "// SKIP: Verify Email requires a real token from email — cannot test in CI.",
-                  "pm.test('[SKIP] Verify Email requires real email token — skipped in CI', function () {",
-                  "    pm.expect(true).to.be.true;",
+                  "pm.test('[SKIP] Verify Email — requires real token/state, skipped in CI', function () {",
+                  "    pm.expect(true).to.be.true; // Intentional skip",
                   "});"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('_isNegativeTest', 'true');"
                 ]
               }
             }
@@ -639,6 +655,15 @@
                   "        pm.expect(jsonData).to.have.property('success');",
                   "    }",
                   "});"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('_isNegativeTest', 'true');"
                 ]
               }
             }
