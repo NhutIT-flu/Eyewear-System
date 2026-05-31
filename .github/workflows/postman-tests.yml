@@ -264,6 +264,31 @@ jobs:
           }) || null;
         }
 
+        // ── Helper: tìm comment CI/CD cũ (theo sentinel marker) ──────────
+        const COMMENT_MARKER = "🤖 [CI/CD-AUTO-COMMENT]";
+
+        function findCiComment(issueKey) {
+          const res = curlJson("GET", `${jiraBase}/rest/api/3/issue/${issueKey}/comment?maxResults=100&orderBy=created`);
+          const comments = res.comments || [];
+          // Tìm comment có chứa marker, lấy comment đầu tiên (cũ nhất)
+          return comments.find(c => {
+            const bodyText = JSON.stringify(c.body || "");
+            return bodyText.includes(COMMENT_MARKER);
+          }) || null;
+        }
+
+        function upsertComment(issueKey, lines) {
+          const body = adf([COMMENT_MARKER, ...lines]);
+          const existing = findCiComment(issueKey);
+          if (existing) {
+            curlJson("PUT", `${jiraBase}/rest/api/3/issue/${issueKey}/comment/${existing.id}`, { body });
+            return "updated";
+          } else {
+            curlJson("POST", `${jiraBase}/rest/api/3/issue/${issueKey}/comment`, { body });
+            return "created";
+          }
+        }
+
         // ── Auto-close bugs whose API now passes ──────────────────────────
         let closedCount = 0;
         for (const issue of openCiBugs) {
@@ -285,15 +310,13 @@ jobs:
           if (!transId) { console.log(`⚠️ Skip auto-close ${issue.key} — transition not found.`); continue; }
 
           curlJson("POST", `${jiraBase}/rest/api/3/issue/${issue.key}/transitions`, { transition: { id: transId } });
-          curlJson("POST", `${jiraBase}/rest/api/3/issue/${issue.key}/comment`, {
-            body: adf([
-              "✅ CI/CD xác nhận API đã PASS. Bug được tự động đóng.",
-              `Branch: ${process.env.BRANCH}`,
-              `Người chạy: ${process.env.ACTOR}`,
-              `GitHub Actions Run #${process.env.RUN_NUMBER}: ${runUrl}`
-            ])
-          });
-          console.log(`✅ Auto-closed ${issue.key} — API đã pass.`);
+          const action = upsertComment(issue.key, [
+            "✅ CI/CD xác nhận API đã PASS. Bug được tự động đóng.",
+            `Branch: ${process.env.BRANCH}`,
+            `Người chạy: ${process.env.ACTOR}`,
+            `GitHub Actions Run #${process.env.RUN_NUMBER}: ${runUrl}`
+          ]);
+          console.log(`✅ Auto-closed ${issue.key} — API đã pass. (comment ${action})`);
           closedCount++;
         }
 
@@ -304,18 +327,16 @@ jobs:
           const existing = findExistingBug(bug);
 
           if (existing) {
-            curlJson("POST", `${jiraBase}/rest/api/3/issue/${existing.key}/comment`, {
-              body: adf([
-                "CI/CD vẫn phát hiện lỗi này trong lần chạy mới.",
-                `API: ${bug.apiName}`,
-                `Bộ test: ${bug.moduleName}`,
-                `Lỗi: ${bug.errorMsg}`,
-                `Người chạy: ${process.env.ACTOR}`,
-                `Branch: ${process.env.BRANCH}`,
-                `GitHub Actions Run #${process.env.RUN_NUMBER}: ${runUrl}`
-              ])
-            });
-            console.log(`💬 Commented on existing bug (${existing.key}) — [${bug.apiName}] still failing.`);
+            const action = upsertComment(existing.key, [
+              "⚠️ CI/CD vẫn phát hiện lỗi này trong lần chạy mới.",
+              `API: ${bug.apiName}`,
+              `Bộ test: ${bug.moduleName}`,
+              `Lỗi: ${bug.errorMsg}`,
+              `Người chạy: ${process.env.ACTOR}`,
+              `Branch: ${process.env.BRANCH}`,
+              `GitHub Actions Run #${process.env.RUN_NUMBER}: ${runUrl}`
+            ]);
+            console.log(`💬 ${action === "updated" ? "Updated" : "Added"} CI/CD comment on (${existing.key}) — [${bug.apiName}] still failing.`);
             commentedCount++;
           } else {
             const jiraData = {
