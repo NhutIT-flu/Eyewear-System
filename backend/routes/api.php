@@ -46,12 +46,12 @@ Router::group(['prefix' => 'api/v1'], function () {
 
     // --- PUBLIC PRODUCT ROUTES ---
     Router::group(['prefix' => 'products'], function () {
-        Router::get('/', [ProductController::class, 'index']);
-        Router::get('featured', [ProductController::class, 'featured']);
-        Router::get('categories', [CategoryController::class, 'index']);
-        Router::get('brands', [ProductController::class, 'brands']);
-        Router::get('lenses/available', [LensController::class, 'available']);
-        Router::get('related', [ProductController::class, 'related']);
+        Router::post('/', [ProductController::class, 'index']);
+        Router::post('featured', [ProductController::class, 'featured']);
+        Router::post('categories', [CategoryController::class, 'index']);
+        Router::post('brands', [ProductController::class, 'brands']);
+        Router::post('lenses/available', [LensController::class, 'available']);
+        Router::post('related', [ProductController::class, 'related']);
         Router::get('{id}', [ProductController::class, 'show']);
     });
 
@@ -73,14 +73,14 @@ Router::group(['prefix' => 'api/v1'], function () {
         
         // Cart
         Router::group(['prefix' => 'cart', 'middleware' => 'permission:manage_cart'], function () {
-            Router::put('/', [CartController::class, 'index']);
-            Router::put('/', [CartController::class, 'store']);
-            Router::get('voucher', [CartController::class, 'applyVoucher']);
-            Router::post('voucher', [CartController::class, 'removeVoucher']);
+            Router::get('/', [CartController::class, 'index']);
+            Router::post('/', [CartController::class, 'store']);
+            Router::post('voucher', [CartController::class, 'applyVoucher']);
+            Router::delete('voucher', [CartController::class, 'removeVoucher']);
             Router::put('items/{id}', [CartController::class, 'update']);
             Router::delete('items/{id}', [CartController::class, 'destroy']);
-            Router::get('toggle-selection', [CartController::class, 'toggleSelection']);
-            Router::get('select-all', [CartController::class, 'selectAll']);
+            Router::post('toggle-selection', [CartController::class, 'toggleSelection']);
+            Router::post('select-all', [CartController::class, 'selectAll']);
         });
 
         // Wishlist
@@ -92,7 +92,7 @@ Router::group(['prefix' => 'api/v1'], function () {
 
         // Checkout & Orders
         Router::group(['prefix' => 'checkout', 'middleware' => 'permission:checkout'], function () {
-            Router::post('/', [CheckoutController::class, 'store']); // Place Order
+            Router::get('/', [CheckoutController::class, 'store']);
         });
 
         Router::group(['prefix' => 'orders'], function () {
@@ -101,7 +101,7 @@ Router::group(['prefix' => 'api/v1'], function () {
         });
 
         Router::group(['prefix' => 'prescriptions', 'middleware' => 'permission:create_order|validate_prescription'], function () {
-            Router::post('/', [PrescriptionController::class, 'index']);
+            Router::get('/', [PrescriptionController::class, 'index']);
             Router::post('/', [PrescriptionController::class, 'store']);
         });
 
