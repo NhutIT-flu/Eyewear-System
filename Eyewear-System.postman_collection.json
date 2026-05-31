@@ -170,7 +170,16 @@
           "function dig(obj, keys) { if (!obj || typeof obj !== 'object') return undefined; for (const key of keys) { if (Object.prototype.hasOwnProperty.call(obj, key)) return obj[key]; } if (obj.data && typeof obj.data === 'object') return dig(obj.data, keys); return undefined; }",
           "function firstArray(obj) { if (Array.isArray(obj)) return obj; if (obj && Array.isArray(obj.data)) return obj.data; if (obj && obj.data && Array.isArray(obj.data.data)) return obj.data.data; if (obj && obj.data && Array.isArray(obj.data.items)) return obj.data.items; if (obj && Array.isArray(obj.items)) return obj.items; return []; }",
           "function setIf(name, value) { if (value !== undefined && value !== null && value !== '') pm.collectionVariables.set(name, String(value)); }",
-          "if (json) { const data = json.data || json; setIf('productId', dig(data, ['product_id','id'])); setIf('variantId', dig(data, ['variant_id','first_variant_id'])); setIf('orderId', dig(data, ['order_id','id'])); setIf('paymentId', dig(data, ['payment_id','id'])); setIf('ticketId', dig(data, ['ticket_id','id'])); setIf('voucherId', dig(data, ['voucher_id','id'])); setIf('addressId', dig(data, ['address_id','id'])); setIf('shipmentId', dig(data, ['shipment_id','id'])); const arr = firstArray(json); if (arr.length && arr[0]) { setIf('productId', arr[0].product_id || arr[0].id); setIf('variantId', arr[0].variant_id || arr[0].productvariant_id || arr[0].first_variant_id); setIf('orderId', arr[0].order_id || arr[0].id); setIf('paymentId', arr[0].payment_id || arr[0].id); setIf('ticketId', arr[0].ticket_id || arr[0].id); setIf('voucherId', arr[0].voucher_id || arr[0].id); setIf('addressId', arr[0].address_id || arr[0].id); setIf('shipmentId', arr[0].shipment_id || arr[0].id); } }"
+          "if (json) { const data = json.data || json; setIf('productId', dig(data, ['product_id','id'])); setIf('variantId', dig(data, ['variant_id','first_variant_id'])); setIf('orderId', dig(data, ['order_id','id'])); setIf('paymentId', dig(data, ['payment_id','id'])); setIf('ticketId', dig(data, ['ticket_id','id'])); setIf('voucherId', dig(data, ['voucher_id','id'])); setIf('addressId', dig(data, ['address_id','id'])); setIf('shipmentId', dig(data, ['shipment_id','id'])); const arr = firstArray(json); if (arr.length && arr[0]) { setIf('productId', arr[0].product_id || arr[0].id); setIf('variantId', arr[0].variant_id || arr[0].productvariant_id || arr[0].first_variant_id); setIf('orderId', arr[0].order_id || arr[0].id); setIf('paymentId', arr[0].payment_id || arr[0].id); setIf('ticketId', arr[0].ticket_id || arr[0].id); setIf('voucherId', arr[0].voucher_id || arr[0].id); setIf('addressId', arr[0].address_id || arr[0].id); setIf('shipmentId', arr[0].shipment_id || arr[0].id); } }",
+          "// Advanced QA Schema Validation (Dynamic)",
+          "if (pm.response.code === 200 || pm.response.code === 201) {",
+          "    const body = pm.response.json();",
+          "    if (body.data && Array.isArray(body.data)) {",
+          "        pm.test('Data array should not contain null items', function() {",
+          "            pm.expect(body.data.every(item => item !== null)).to.be.true;",
+          "        });",
+          "    }",
+          "}"
         ]
       }
     }
@@ -263,7 +272,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Postman Test User\",\n  \"email\": \"postman.test@example.com\",\n  \"password\": \"123456\"\n}"
+              "raw": "{\n  \"name\": \"{{$randomFullName}}\",\n  \"email\": \"{{$randomEmail}}\",\n  \"password\": \"123456\"\n}"
             }
           },
           "event": [
@@ -757,6 +766,63 @@
               }
             }
           ]
+        },
+        {
+          "name": "Login (Error - Invalid Credentials)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 401 Unauthorized', function () { pm.expect(pm.response.code).to.eql(401); });",
+                  "pm.test('Response has error message', function () { var jsonData = pm.response.json(); pm.expect(jsonData).to.have.property('success', false); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"invalid@example.com\",\n  \"password\": \"wrongpass\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Register (Error - Missing Email)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 422 Unprocessable Entity', function () { pm.expect(pm.response.code).to.eql(422); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/register",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{$randomFullName}}\",\n  \"password\": \"123456\"\n}"
+            }
+          }
         }
       ]
     },
@@ -3069,6 +3135,34 @@
     {
       "name": "12. Admin Management",
       "item": [
+        {
+          "name": "Get Users (Error - 403 Forbidden for Customer)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 403 Forbidden', function () { pm.expect(pm.response.code).to.be.oneOf([401, 403]); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/admin/users",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              },
+              {
+                "key": "X-Auth-Token-Var",
+                "value": "customerToken"
+              }
+            ]
+          }
+        },
         {
           "name": "List Users",
           "request": {
