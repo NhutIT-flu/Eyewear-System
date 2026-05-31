@@ -83,7 +83,7 @@ class PaymentService
     public function getPaymentByOrderId(int $orderId): ?array
     {
         $db = Database::getInstance();
-        $stmt = $db->prepare("SELECT * FROM payment WHERE order_id = ? ORDER BY created_at DESC LIMIT 1");
+        $stmt = $db->prepare("SELECT * FROM payment WHERE order_id = ? ORDER BY id DESC LIMIT 1");
         $stmt->execute([$orderId]);
         $row = $stmt->fetch(\PDO::FETCH_ASSOC);
         return $row ?: null;
