@@ -97,12 +97,12 @@
     },
     {
       "key": "orderId",
-      "value": "1",
+      "value": "",
       "type": "string"
     },
     {
       "key": "paymentId",
-      "value": "1",
+      "value": "",
       "type": "string"
     },
     {
@@ -2039,7 +2039,17 @@
                   "        pm.expect(jsonData).to.be.an('object');",
                   "        pm.expect(jsonData).to.have.property('success');",
                   "    }",
-                  "});"
+                  "});",
+                  "const res = pm.response.json();",
+                  "const data = res.data || {};",
+                  "const oid = data.order_id || data.id;",
+                  "",
+                  "pm.test('Checkout returns order id', function () {",
+                  "    pm.expect(oid).to.exist;",
+                  "});",
+                  "",
+                  "pm.collectionVariables.set('orderId', String(oid));",
+                  "console.log('Saved orderId:', oid);"
                 ]
               }
             }
