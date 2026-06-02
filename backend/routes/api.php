@@ -56,7 +56,7 @@ Router::group(['prefix' => 'api/v1'], function () {
     });
 
      // --- PROTECTED PROFILE & ADDRESS ROUTES ---
-    Router::group(['prefix' => 'profile', 'middleware' => ['auth:sanctum', 'permission:manage_profile']], function () {
+    Router::group(['prefix' => 'profile', 'middleware' => ['auth:sanctum']], function () {
     
         Router::get('/', [ProfileController::class, 'show']);      // Get Profile
         Router::put('/', [ProfileController::class, 'update']);    // Update Profile

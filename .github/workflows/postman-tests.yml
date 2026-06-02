@@ -233,7 +233,7 @@ jobs:
 
           for (const exec of (data?.run?.executions || [])) {
             const apiName = normalize(exec?.item?.name || "");
-            if (apiName && !failedApis.has(apiName)) passedApis.add(apiName);
+            if (apiName && !failedApis.has(apiName)) passedApis.add(`${item.name}|||${apiName}`);
             
             const key = `${item.name}|||${apiName}`;
             if (apiName && failuresMap.has(key)) {
@@ -258,7 +258,7 @@ jobs:
         // ── Load open CI/CD bugs from Jira (for auto-close logic) ──────────
         function getOpenCiBugs() {
           const jql = `project = ${process.env.PROJECT_KEY} AND statusCategory != Done`;
-          const url = `${jiraBase}/rest/api/3/search/jql?jql=${encodeURIComponent(jql)}&maxResults=1000&fields=summary,status,labels,issuetype`;
+          const url = `${jiraBase}/rest/api/3/search/jql?jql=${encodeURIComponent(jql)}&maxResults=1000&fields=summary,status,labels,issuetype,assignee`;
           const res = curlJson("GET", url);
           if (res.errorMessages || res.errors) {
             console.log("❌ Jira search error:", JSON.stringify(res).slice(0, 500));
@@ -278,7 +278,7 @@ jobs:
         // ── Load ALL CI/CD bugs from Jira (for deduplication — includes Done) ──
         function getAllCiBugs() {
           const jql = `project = ${process.env.PROJECT_KEY} AND issuetype = Bug AND labels = "ci-cd" ORDER BY created DESC`;
-          const url = `${jiraBase}/rest/api/3/search/jql?jql=${encodeURIComponent(jql)}&maxResults=1000&fields=summary,status,labels,issuetype`;
+          const url = `${jiraBase}/rest/api/3/search/jql?jql=${encodeURIComponent(jql)}&maxResults=1000&fields=summary,status,labels,issuetype,assignee`;
           const res = curlJson("GET", url);
           if (res.errorMessages || res.errors) {
             console.log("⚠️ Jira all-bugs search error:", JSON.stringify(res).slice(0, 300));
@@ -342,9 +342,10 @@ jobs:
           const labels  = issue?.fields?.labels || [];
           let matched   = false;
 
-          for (const apiName of passedApis) {
-            const bk = slugify(`Eyewear API-${apiName}`);
-            if (labels.includes(`api-${bk}`) || (summary.includes("[CI/CD]") && summary.includes(apiName))) {
+          for (const passedKey of passedApis) {
+            const [modName, apiName] = passedKey.split("|||");
+            const bk = slugify(`${modName}-${apiName}`);
+            if (labels.includes(`api-${bk}`) || (summary.includes("[CI/CD]") && summary.includes(apiName) && summary.includes(modName))) {
               matched = true;
               break;
             }
@@ -373,8 +374,56 @@ jobs:
           const existing = findExistingBug(bug);
 
           if (existing) {
+            // Reopen if bug was already marked as Done
+            const statusName = (existing?.fields?.status?.statusCategory?.name || "").toLowerCase();
+            const statusKey = (existing?.fields?.status?.statusCategory?.key || "").toLowerCase();
+            
+            const hasBranch = (issueKey) => {
+              try {
+                const out = execSync("git ls-remote --heads origin", { encoding: "utf8" });
+                return out.includes(issueKey);
+              } catch (e) { return false; }
+            };
+            
+            const isWorking = hasBranch(existing.key);
+            const isDone = (statusName === "done" || statusKey === "done");
+            const isInProgress = (statusName.includes("in progress") || statusName.includes("đang") || statusName.includes("tiến hành"));
+            
+            // We want it to be In Progress if it has a branch, To Do if it doesn't.
+            const needsTransition = isDone || (isWorking && !isInProgress) || (!isWorking && isInProgress);
+
+            if (needsTransition) {
+              const attemptTransition = (issueKey, targetList) => {
+                const res = curlJson("GET", `${jiraBase}/rest/api/3/issue/${issueKey}/transitions`);
+                const trans = res.transitions || [];
+                let found = null;
+                for (const name of targetList) {
+                  found = trans.find(t => normalize(t.name).toLowerCase().includes(name));
+                  if (found) break;
+                }
+                if (found) {
+                  curlJson("POST", `${jiraBase}/rest/api/3/issue/${issueKey}/transitions`, { transition: { id: found.id } });
+                  return found;
+                }
+                return null;
+              };
+
+              let firstTries = isWorking 
+                ? ["in progress", "start", "đang", "tiến hành", "reopen", "open", "to do", "backlog"]
+                : ["to do", "backlog", "open"]; // Do not fallback to in progress if not working!
+              
+              const firstTrans = attemptTransition(existing.key, firstTries) || attemptTransition(existing.key, [""]); // fallback to any
+              if (firstTrans) console.log(`🔄 Moved ${existing.key} to (Transition: ${firstTrans.name})`);
+
+              // Double check if we need a second hop to In Progress
+              if (isWorking) {
+                 const hopTrans = attemptTransition(existing.key, ["in progress", "start", "đang", "tiến hành"]);
+                 if (hopTrans) console.log(`🚀 Double-hopped ${existing.key} to (Transition: ${hopTrans.name})`);
+              }
+            }
+
             const action = upsertComment(existing.key, [
-              "⚠️ CI/CD vẫn phát hiện lỗi này trong lần chạy mới.",
+              "⚠️ CI/CD vẫn phát hiện lỗi này trong lần chạy mới (Bug tái diễn - Reopened).",
               `API: ${bug.apiName}`,
               `Bộ test: ${bug.moduleName}`,
               `Lỗi: ${bug.errorMsg}`,
