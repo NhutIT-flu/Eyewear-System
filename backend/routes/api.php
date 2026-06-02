@@ -46,12 +46,12 @@ Router::group(['prefix' => 'api/v1'], function () {
 
     // --- PUBLIC PRODUCT ROUTES ---
     Router::group(['prefix' => 'products'], function () {
-        Router::post('/', [ProductController::class, 'index']);
-        Router::post('featured', [ProductController::class, 'featured']);
-        Router::post('categories', [CategoryController::class, 'index']);
-        Router::post('brands', [ProductController::class, 'brands']);
-        Router::post('lenses/available', [LensController::class, 'available']);
-        Router::post('related', [ProductController::class, 'related']);
+        Router::get('/', [ProductController::class, 'index']);
+        Router::get('featured', [ProductController::class, 'featured']);
+        Router::get('categories', [CategoryController::class, 'index']);
+        Router::get('brands', [ProductController::class, 'brands']);
+        Router::get('lenses/available', [LensController::class, 'available']);
+        Router::get('related', [ProductController::class, 'related']);
         Router::get('{id}', [ProductController::class, 'show']);
     });
 
@@ -92,7 +92,7 @@ Router::group(['prefix' => 'api/v1'], function () {
 
         // Checkout & Orders
         Router::group(['prefix' => 'checkout', 'middleware' => 'permission:checkout'], function () {
-            Router::get('/', [CheckoutController::class, 'store']);
+            Router::post('/', [CheckoutController::class, 'store']);
         });
 
         Router::group(['prefix' => 'orders'], function () {
@@ -130,7 +130,7 @@ Router::group(['prefix' => 'api/v1'], function () {
         });
     });
 
-    // --- STAFF & ADMIN ROUTES ---
+        // --- STAFF & ADMIN ROUTES ---
     Router::group(['middleware' => ['auth:sanctum']], function () {
         
         // Sales & Operations
@@ -145,7 +145,7 @@ Router::group(['prefix' => 'api/v1'], function () {
 
         Router::group(['prefix' => 'ops'], function () {
             Router::get('/', [OperationsController::class, 'index'])->middleware('permission:view_orders|pack_order|create_shipment|update_order_status');
-            Router::post('advance', [OperationsController::class, 'advanceProduction'])->middleware('permission:update_order_status|pack_order');
+            Router::post('advance', [OperationsController::class, 'advanceProduction'])->middleware('permission:update_order_status');
             Router::post('shipments', [OperationsController::class, 'createShipment'])->middleware('permission:create_shipment');
             Router::put('shipments', [OperationsController::class, 'updateShipment'])->middleware('permission:update_tracking');
         });
