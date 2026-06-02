@@ -378,24 +378,34 @@ jobs:
             const statusKey = (existing?.fields?.status?.statusCategory?.key || "").toLowerCase();
             
             if (statusName === "done" || statusKey === "done" || statusName === "to do" || statusKey === "to do") {
-              const transRes = curlJson("GET", `${jiraBase}/rest/api/3/issue/${existing.key}/transitions`);
-              const transitions = transRes.transitions || [];
-              
-              // Cải tiến: Thêm các biến thể của "In Progress" (vd: start progress, đang xử lý)
-              const targetNames = existing?.fields?.assignee 
-                ? ["in progress", "start progress", "đang xử lý", "reopen", "open", "to do", "backlog"]
+              const attemptTransition = (issueKey, targetList) => {
+                const res = curlJson("GET", `${jiraBase}/rest/api/3/issue/${issueKey}/transitions`);
+                const trans = res.transitions || [];
+                let found = null;
+                for (const name of targetList) {
+                  found = trans.find(t => normalize(t.name).toLowerCase().includes(name));
+                  if (found) break;
+                }
+                if (found) {
+                  curlJson("POST", `${jiraBase}/rest/api/3/issue/${issueKey}/transitions`, { transition: { id: found.id } });
+                  return found;
+                }
+                return null;
+              };
+
+              let firstTries = existing?.fields?.assignee 
+                ? ["in progress", "start", "đang", "tiến hành", "reopen", "open", "to do", "backlog"]
                 : ["to do", "backlog", "open", "in progress"];
-                
-              let reopen = null;
-              for (const name of targetNames) {
-                reopen = transitions.find(t => normalize(t.name).toLowerCase() === name || normalize(t.name).toLowerCase().includes(name));
-                if (reopen) break;
-              }
-              if (!reopen) reopen = transitions[0]; // fallback
               
-              if (reopen && (statusName === "done" || statusKey === "done" || (existing?.fields?.assignee && !reopen.name.toLowerCase().includes("to do")))) {
-                curlJson("POST", `${jiraBase}/rest/api/3/issue/${existing.key}/transitions`, { transition: { id: reopen.id } });
-                console.log(`🔄 Moved ${existing.key} to (Transition: ${reopen.name})`);
+              if (statusName === "done" || statusKey === "done") {
+                const firstTrans = attemptTransition(existing.key, firstTries) || attemptTransition(existing.key, [""]); // fallback to any
+                if (firstTrans) console.log(`🔄 Moved ${existing.key} to (Transition: ${firstTrans.name})`);
+              }
+
+              // Double check if we need a second hop to In Progress
+              if (existing?.fields?.assignee) {
+                 const hopTrans = attemptTransition(existing.key, ["in progress", "start", "đang", "tiến hành"]);
+                 if (hopTrans) console.log(`🚀 Double-hopped ${existing.key} to (Transition: ${hopTrans.name})`);
               }
             }
 
