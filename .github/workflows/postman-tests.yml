@@ -393,7 +393,16 @@ jobs:
                 return null;
               };
 
-              let firstTries = existing?.fields?.assignee 
+              const hasBranch = (issueKey) => {
+                try {
+                  const out = execSync("git ls-remote --heads origin", { encoding: "utf8" });
+                  return out.includes(issueKey);
+                } catch (e) { return false; }
+              };
+              
+              const isWorking = hasBranch(existing.key);
+
+              let firstTries = isWorking 
                 ? ["in progress", "start", "đang", "tiến hành", "reopen", "open", "to do", "backlog"]
                 : ["to do", "backlog", "open", "in progress"];
               
@@ -403,7 +412,7 @@ jobs:
               }
 
               // Double check if we need a second hop to In Progress
-              if (existing?.fields?.assignee) {
+              if (isWorking) {
                  const hopTrans = attemptTransition(existing.key, ["in progress", "start", "đang", "tiến hành"]);
                  if (hopTrans) console.log(`🚀 Double-hopped ${existing.key} to (Transition: ${hopTrans.name})`);
               }
