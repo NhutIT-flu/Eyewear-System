@@ -68,6 +68,9 @@ abstract class BaseController
             return null;
         }
 
+        // Handle combined Authorization headers like: "Bearer <token1>, Bearer <token2>"
+        // and prefer the last explicit Bearer token because request-level headers
+        // typically override inherited collection-level auth in API tools.
         if (preg_match_all('/Bearer\s+([^,\s]+)/i', $authHeader, $matches) === 1 || !empty($matches[1])) {
             $tokens = array_values(array_filter(array_map('trim', $matches[1]), static fn ($token) => $token !== ''));
             if (!empty($tokens)) {

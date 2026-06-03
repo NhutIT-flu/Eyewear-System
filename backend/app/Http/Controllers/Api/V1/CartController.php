@@ -29,6 +29,7 @@ class CartController extends BaseController
         try {
             $items = $this->cartService->getCart($userId);
             $totals = $this->cartService->getCartTotals($userId);
+
             return ApiResponse::success([
                 'items' => $items,
                 'totals' => $totals
