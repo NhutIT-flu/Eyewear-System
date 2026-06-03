@@ -71,12 +71,17 @@ Router::group(['prefix' => 'api/v1'], function () {
     // --- SHOPPING ROUTES ---
     Router::group(['middleware' => 'auth:sanctum'], function() {
         
-        // Cart
-        Router::group(['prefix' => 'cart', 'middleware' => 'permission:manage_cart'], function () {
+        // ====== CART - VOUCHER OPERATIONS (No Permission Required - All Authenticated Users) ======
+        Router::group(['prefix' => 'cart'], function () {
             Router::get('/', [CartController::class, 'index']);
-            Router::post('/', [CartController::class, 'store']);
+            // Voucher operations - Accessible to all authenticated users
             Router::post('voucher', [CartController::class, 'applyVoucher']);
             Router::delete('voucher', [CartController::class, 'removeVoucher']);
+        });
+
+        // ====== CART - ITEM MANAGEMENT (Requires manage_cart Permission) ======
+        Router::group(['prefix' => 'cart', 'middleware' => 'permission:manage_cart'], function () {
+            Router::post('/', [CartController::class, 'store']);
             Router::put('items/{id}', [CartController::class, 'update']);
             Router::delete('items/{id}', [CartController::class, 'destroy']);
             Router::post('toggle-selection', [CartController::class, 'toggleSelection']);
