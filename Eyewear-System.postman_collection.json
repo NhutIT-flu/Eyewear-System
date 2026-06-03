@@ -67,7 +67,7 @@
     },
     {
       "key": "seedPassword",
-      "value": "123456",
+      "value": "123",
       "type": "string"
     },
     {
@@ -2358,7 +2358,7 @@
                   "",
                   "",
                   "// --- Retained custom extraction logic ---",
-                  "if (pm.collectionVariables.get('_isNegativeTest') !== 'true' && pm.response.code !== 204) {",
+                  "if (!isNegative && pm.response.code !== 204) {",
                   "    const res = pm.response.json();",
                   "    pm.collectionVariables.set('orderId', String(res.data.order_id));",
                   "}"
