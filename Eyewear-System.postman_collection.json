@@ -348,9 +348,9 @@
                   "} catch(e) {}",
                   "",
                   "",
-                  "if (res.success && res.data && res.data.access_token) {",
-                  "    pm.collectionVariables.set('customerToken', res.data.access_token);",
-                  "    pm.collectionVariables.set('authToken', res.data.access_token);",
+                  "if (res.success && res.data && (res.data.token || res.data.access_token)) {",
+                  "    pm.collectionVariables.set('customerToken', (res.data.token || res.data.access_token));",
+                  "    pm.collectionVariables.set('authToken', (res.data.token || res.data.access_token));",
                   "    if (res.data.user) pm.collectionVariables.set('customerId', String(res.data.user.id));",
                   "}"
                 ]
@@ -403,9 +403,9 @@
                   "} catch(e) {}",
                   "",
                   "",
-                  "if (res.success && res.data && res.data.access_token) {",
-                  "    pm.collectionVariables.set('adminToken', res.data.access_token);",
-                  "    pm.collectionVariables.set('authToken', res.data.access_token);",
+                  "if (res.success && res.data && (res.data.token || res.data.access_token)) {",
+                  "    pm.collectionVariables.set('adminToken', (res.data.token || res.data.access_token));",
+                  "    pm.collectionVariables.set('authToken', (res.data.token || res.data.access_token));",
                   "    if (res.data.user) pm.collectionVariables.set('customerId', String(res.data.user.id));",
                   "}"
                 ]
@@ -736,8 +736,8 @@
                   "} catch(e) {}",
                   "",
                   "",
-                  "if (res.success && res.data && res.data.access_token) {",
-                  "    pm.collectionVariables.set('managerToken', res.data.access_token);",
+                  "if (res.success && res.data && (res.data.token || res.data.access_token)) {",
+                  "    pm.collectionVariables.set('managerToken', (res.data.token || res.data.access_token));",
                   "    if (res.data.user) pm.collectionVariables.set('customerId', String(res.data.user.id));",
                   "}"
                 ]
@@ -790,8 +790,8 @@
                   "} catch(e) {}",
                   "",
                   "",
-                  "if (res.success && res.data && res.data.access_token) {",
-                  "    pm.collectionVariables.set('salesToken', res.data.access_token);",
+                  "if (res.success && res.data && (res.data.token || res.data.access_token)) {",
+                  "    pm.collectionVariables.set('salesToken', (res.data.token || res.data.access_token));",
                   "    if (res.data.user) pm.collectionVariables.set('customerId', String(res.data.user.id));",
                   "}"
                 ]
@@ -844,8 +844,8 @@
                   "} catch(e) {}",
                   "",
                   "",
-                  "if (res.success && res.data && res.data.access_token) {",
-                  "    pm.collectionVariables.set('operationsToken', res.data.access_token);",
+                  "if (res.success && res.data && (res.data.token || res.data.access_token)) {",
+                  "    pm.collectionVariables.set('operationsToken', (res.data.token || res.data.access_token));",
                   "    if (res.data.user) pm.collectionVariables.set('customerId', String(res.data.user.id));",
                   "}"
                 ]
@@ -3891,7 +3891,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"full_name\": \"Nhan Vien Moi\",\n  \"email\": \"staff@example.com\",\n  \"password\": \"password123\",\n  \"role_id\": 3\n}"
+              "raw": "{\n  \"full_name\": \"Staff CI Test\",\n  \"email\": \"staff_ci_{{$timestamp}}@example.com\",\n  \"password\": \"password123\",\n  \"role_id\": 3\n}"
             }
           },
           "event": [
