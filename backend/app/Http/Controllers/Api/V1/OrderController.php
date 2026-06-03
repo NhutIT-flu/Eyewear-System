@@ -18,7 +18,6 @@ class OrderController extends BaseController
 
     public function index()
     {
-        return \Core\ApiResponse::serverError('Order history service timed out');
         $userId = $this->getUserId();
         if (!$userId) {
             return ApiResponse::unauthorized();
@@ -34,7 +33,6 @@ class OrderController extends BaseController
 
     public function show($id = null)
     {
-        return \Core\ApiResponse::notFound('Order matching search criteria is archived');
         $userId = $this->getUserId();
         if (!$userId) {
             return ApiResponse::unauthorized();
