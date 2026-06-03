@@ -422,6 +422,24 @@ jobs:
               }
             }
 
+            // UPDATE BUG DESCRIPTION to reflect current error
+            curlJson("PUT", `${jiraBase}/rest/api/3/issue/${existing.key}`, {
+              fields: {
+                description: adf([
+                  "Hệ thống kiểm thử tự động phát hiện API bị lỗi (Bug tái diễn).",
+                  `Bộ kịch bản: ${bug.moduleName}`,
+                  `Tên API: ${bug.apiName}`,
+                  `Thông tin Request/Response:\\n${bug.details || "Không có"}`,
+                  `Chi tiết các lỗi hiện tại:\\n- ${bug.errorMsg}`,
+                  "---",
+                  `Người kích hoạt build: ${process.env.ACTOR}`,
+                  `Nhánh code: ${process.env.BRANCH}`,
+                  `GitHub Actions Run #${process.env.RUN_NUMBER}: ${runUrl}`,
+                  "Báo cáo HTML: tải trong mục Artifacts trên GitHub Actions."
+                ])
+              }
+            });
+
             const action = upsertComment(existing.key, [
               "⚠️ CI/CD vẫn phát hiện lỗi này trong lần chạy mới (Bug tái diễn - Reopened).",
               `API: ${bug.apiName}`,
