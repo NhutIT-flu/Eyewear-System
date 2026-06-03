@@ -18,7 +18,7 @@ class AddressController extends BaseController
 
     public function index()
     {
-        $userId = $this->getUserId();
+        $userId = $this->requireAuth();
         if (!$userId) {
             return ApiResponse::unauthorized();
         }
@@ -33,7 +33,7 @@ class AddressController extends BaseController
 
     public function store()
     {
-        $userId = $this->getUserId();
+        $userId = $this->requireAuth();
         if (!$userId) {
             return ApiResponse::unauthorized();
         }
@@ -49,7 +49,7 @@ class AddressController extends BaseController
 
     public function update($id)
     {
-        $userId = $this->getUserId();
+        $userId = $this->requireAuth();
         if (!$userId) {
             return ApiResponse::unauthorized();
         }
@@ -65,7 +65,7 @@ class AddressController extends BaseController
 
     public function destroy($id)
     {
-        $userId = $this->getUserId();
+        $userId = $this->requireAuth();
         if (!$userId) {
             return ApiResponse::unauthorized();
         }

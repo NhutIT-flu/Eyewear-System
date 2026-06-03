@@ -36,7 +36,7 @@ class ProfileService
 
         $ordersStmt = $db->prepare(
             'SELECT o.id, o.order_number, o.status, o.total_amount, o.placed_at, o.production_step,
-                    p.payment_method, COALESCE(p.status, o.status) AS payment_status
+                    MAX(p.payment_method) as payment_method, COALESCE(MAX(p.status), o.status) AS payment_status
              FROM `order` o
              LEFT JOIN payment p ON p.order_id = o.id
              WHERE o.user_id = ?

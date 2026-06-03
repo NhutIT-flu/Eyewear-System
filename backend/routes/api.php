@@ -46,21 +46,21 @@ Router::group(['prefix' => 'api/v1'], function () {
 
     // --- PUBLIC PRODUCT ROUTES ---
     Router::group(['prefix' => 'products'], function () {
-        Router::post('/', [ProductController::class, 'index']);
-        Router::post('featured', [ProductController::class, 'featured']);
-        Router::post('categories', [CategoryController::class, 'index']);
-        Router::post('brands', [ProductController::class, 'brands']);
-        Router::post('lenses/available', [LensController::class, 'available']);
-        Router::post('related', [ProductController::class, 'related']);
+        Router::get('/', [ProductController::class, 'index']);
+        Router::get('featured', [ProductController::class, 'featured']);
+        Router::get('categories', [CategoryController::class, 'index']);
+        Router::get('brands', [ProductController::class, 'brands']);
+        Router::get('lenses/available', [LensController::class, 'available']);
+        Router::get('related', [ProductController::class, 'related']);
         Router::get('{id}', [ProductController::class, 'show']);
     });
 
      // --- PROTECTED PROFILE & ADDRESS ROUTES ---
-    Router::group(['prefix' => 'profile', 'middleware' => ['auth:sanctum', 'permission:manage_profile']], function () {
+    Router::group(['prefix' => 'profile', 'middleware' => ['auth:sanctum']], function () {
     
         Router::get('/', [ProfileController::class, 'show']);      // Get Profile
         Router::put('/', [ProfileController::class, 'update']);    // Update Profile
-        Router::put('avatar', [ProfileController::class, 'uploadAvatar']);
+        Router::post('avatar', [ProfileController::class, 'uploadAvatar']);
     
         Router::get('addresses', [AddressController::class, 'index']);   // List addresses
         Router::post('addresses', [AddressController::class, 'store']);  // Add address
@@ -71,12 +71,17 @@ Router::group(['prefix' => 'api/v1'], function () {
     // --- SHOPPING ROUTES ---
     Router::group(['middleware' => 'auth:sanctum'], function() {
         
-        // Cart
-        Router::group(['prefix' => 'cart', 'middleware' => 'permission:manage_cart'], function () {
+        // ====== CART - VOUCHER OPERATIONS (No Permission Required - All Authenticated Users) ======
+        Router::group(['prefix' => 'cart'], function () {
             Router::get('/', [CartController::class, 'index']);
-            Router::post('/', [CartController::class, 'store']);
+            // Voucher operations - Accessible to all authenticated users
             Router::post('voucher', [CartController::class, 'applyVoucher']);
             Router::delete('voucher', [CartController::class, 'removeVoucher']);
+        });
+
+        // ====== CART - ITEM MANAGEMENT (Requires manage_cart Permission) ======
+        Router::group(['prefix' => 'cart', 'middleware' => 'permission:manage_cart'], function () {
+            Router::post('/', [CartController::class, 'store']);
             Router::put('items/{id}', [CartController::class, 'update']);
             Router::delete('items/{id}', [CartController::class, 'destroy']);
             Router::post('toggle-selection', [CartController::class, 'toggleSelection']);
@@ -132,7 +137,7 @@ Router::group(['prefix' => 'api/v1'], function () {
         });
     });
 
-    // --- STAFF & ADMIN ROUTES ---
+        // --- STAFF & ADMIN ROUTES ---
     Router::group(['middleware' => ['auth:sanctum']], function () {
         
         // Sales & Operations
@@ -147,7 +152,7 @@ Router::group(['prefix' => 'api/v1'], function () {
 
         Router::group(['prefix' => 'ops'], function () {
             Router::get('/', [OperationsController::class, 'index'])->middleware('permission:view_orders|pack_order|create_shipment|update_order_status');
-            Router::post('advance', [OperationsController::class, 'advanceProduction'])->middleware('permission:update_order_status|pack_order');
+            Router::post('advance', [OperationsController::class, 'advanceProduction'])->middleware('permission:update_order_status');
             Router::post('shipments', [OperationsController::class, 'createShipment'])->middleware('permission:create_shipment');
             Router::put('shipments', [OperationsController::class, 'updateShipment'])->middleware('permission:update_tracking');
         });
