@@ -114,7 +114,7 @@ Router::group(['prefix' => 'api/v1'], function () {
 
         // Payments
         Router::group(['prefix' => 'payments'], function () {
-            Router::post('process', [PaymentController::class, 'process'])->middleware('permission:make_payment');
+            Router::post('process', [PaymentController::class, 'process']);
             Router::get('status',  [PaymentController::class, 'status']);
             
             Router::group(['middleware' => 'permission:confirm_order'], function() {

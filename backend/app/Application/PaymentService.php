@@ -8,7 +8,7 @@ use Core\Database;
 
 class PaymentService
 {
-    public function processPayment(int $orderId, string $method, float $amount): array
+    public function processPayment(int $orderId, string $method, float $amount, ?int $userId = null): array
     {
         $db = Database::getInstance();
 
@@ -17,15 +17,51 @@ class PaymentService
             throw new \Exception('Order not found');
         }
 
+        if ($userId !== null && (int) $order->user_id !== $userId) {
+            throw new \Exception('Order does not belong to the authenticated user');
+        }
+
         // 1. Xác định trạng thái thanh toán dựa trên phương thức (case-insensitive)
-        $methodLower = strtolower($method);
-        $paymentStatus = in_array($methodLower, ['card', 'e_wallet', 'momo']) ? 'paid' : 'pending';
+        $methodLower = strtolower(trim($method));
+        $allowedMethods = ['cod', 'bank_transfer', 'card', 'e_wallet'];
+        if (!in_array($methodLower, $allowedMethods, true)) {
+            throw new \Exception('Unsupported payment method');
+        }
+
+        if ($amount <= 0) {
+            $amount = (float) $order->total_amount;
+        }
+
+        $paymentStatus = in_array($methodLower, ['card', 'e_wallet'], true) ? 'paid' : 'pending';
 
         // 2. Tạo bản ghi Payment (chỉ record payment, không update order status)
         $transactionRef = strtoupper(bin2hex(random_bytes(5)));
+        $existingPayment = $this->getPaymentByOrderId($orderId);
+        if ($existingPayment) {
+            $stmt = $db->prepare("
+                UPDATE payment
+                SET payment_method = ?, amount = ?, status = ?, transaction_ref = ?, paid_at = ?
+                WHERE id = ?
+            ");
+            $stmt->execute([
+                $methodLower,
+                $amount,
+                $paymentStatus,
+                $transactionRef,
+                $paymentStatus === 'paid' ? date('Y-m-d H:i:s') : null,
+                $existingPayment['id'],
+            ]);
+
+            $refreshStmt = $db->prepare("SELECT * FROM payment WHERE id = ?");
+            $refreshStmt->execute([$existingPayment['id']]);
+            $updated = $refreshStmt->fetch(\PDO::FETCH_ASSOC);
+
+            return $updated ?: $existingPayment;
+        }
+
         $payment = Payment::create([
             'order_id' => $orderId,
-            'payment_method' => $method,
+            'payment_method' => $methodLower,
             'amount' => $amount,
             'status' => $paymentStatus,
             'transaction_ref' => $transactionRef,
