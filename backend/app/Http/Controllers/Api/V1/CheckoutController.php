@@ -21,7 +21,6 @@ class CheckoutController extends BaseController
      */
     public function store()
     {
-        return \Core\ApiResponse::serverError('Order creation failed: transaction deadlock');
         $userId = $this->getUserId();
         if (!$userId) {
             return ApiResponse::unauthorized();

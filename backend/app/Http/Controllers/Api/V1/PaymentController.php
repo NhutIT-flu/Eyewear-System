@@ -21,6 +21,11 @@ class PaymentController extends BaseController
      */
     public function process()
     {
+        $userId = $this->getUserId();
+        if (!$userId) {
+            return ApiResponse::unauthorized();
+        }
+
         $input   = $this->getJsonInput();
         $orderId = $input['order_id'] ?? null;
         $method  = $input['method'] ?? 'cod';
@@ -31,7 +36,7 @@ class PaymentController extends BaseController
         }
 
         try {
-            $payment = $this->paymentService->processPayment((int) $orderId, $method, (float) $amount);
+            $payment = $this->paymentService->processPayment((int) $orderId, $method, (float) $amount, $userId);
             return ApiResponse::success($payment, 'Payment processed successfully');
         } catch (Exception $e) {
             return ApiResponse::error($e->getMessage());
