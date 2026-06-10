@@ -91,7 +91,7 @@ Router::group(['prefix' => 'api/v1'], function () {
         });
 
         // Wishlist
-        Router::group(['prefix' => 'wishlist', 'middleware' => 'permission:manage_cart'], function () {
+        Router::group(['prefix' => 'wishlist'], function () {
             Router::get('/', [WishlistController::class, 'index']);
             Router::post('toggle', [WishlistController::class, 'toggle']);
             Router::delete('{id}', [WishlistController::class, 'destroy']);
