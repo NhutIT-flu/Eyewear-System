@@ -9,15 +9,13 @@ pipeline {
     }
 
     environment {
-        BACKEND_DIR  = 'backend'
-        FRONTEND_DIR = 'frontend'
-        PROJECT_KEY  = 'ESQ'
+        BACKEND_DIR        = 'backend'
+        FRONTEND_DIR       = 'frontend'
+        PROJECT_KEY        = 'ESQ'
         SONAR_PROJECT_KEY  = 'eyewear-system'
         SONAR_PROJECT_NAME = 'Eyewear System'
-        JAVA_HOME = 'C:\\Program Files\\Java\\jdk-21.0.10'
+        JAVA_HOME          = 'C:\\Program Files\\Java\\jdk-21.0.10'
     }
-
-
 
     stages {
 
@@ -147,7 +145,8 @@ pipeline {
 
         // ─────────────────────────────────────────────────────────
         // 6. SONARQUBE ANALYSIS
-        // Requires: SonarQube Scanner plugin + credential 'SONAR_TOKEN'
+        // All scan settings come from sonar-project.properties
+        // Only projectVersion & token are passed via CLI
         // ─────────────────────────────────────────────────────────
         stage('SonarQube Analysis') {
             steps {
@@ -159,23 +158,13 @@ pipeline {
                             if (isUnix()) {
                                 sh """
                                     "${scannerHome}/bin/sonar-scanner" \
-                                        -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
-                                        -Dsonar.projectName="${SONAR_PROJECT_NAME}" \
                                         -Dsonar.projectVersion=1.0.${BUILD_NUMBER} \
-                                        -Dsonar.sources=backend/app,backend/core,backend/routes,frontend/js \
-                                        -Dsonar.exclusions=**/vendor/**,**/node_modules/**,**/*.min.js \
-                                        -Dsonar.php.file.suffixes=php \
                                         -Dsonar.token=\$SONAR_TOKEN
                                 """
                             } else {
                                 bat """
                                     "${scannerHome}\\bin\\sonar-scanner.bat" ^
-                                        -Dsonar.projectKey=${SONAR_PROJECT_KEY} ^
-                                        -Dsonar.projectName="${SONAR_PROJECT_NAME}" ^
                                         -Dsonar.projectVersion=1.0.${BUILD_NUMBER} ^
-                                        -Dsonar.sources=backend/app,backend/core,backend/routes,frontend/js ^
-                                        -Dsonar.exclusions=**/vendor/**,**/node_modules/**,**/*.min.js ^
-                                        -Dsonar.php.file.suffixes=php ^
                                         -Dsonar.token=%SONAR_TOKEN%
                                 """
                             }
@@ -187,7 +176,6 @@ pipeline {
 
         // ─────────────────────────────────────────────────────────
         // 7. SONARQUBE QUALITY GATE
-        // Chờ SonarQube trả kết quả pass/fail
         // ─────────────────────────────────────────────────────────
         stage('Quality Gate') {
             steps {
@@ -199,7 +187,52 @@ pipeline {
         }
 
         // ─────────────────────────────────────────────────────────
-        // 8. NOTIFY JIRA
+        // 8. NEWMAN API TESTS (Postman Collection)
+        // Chạy bộ test Postman → lưu report JSON + HTML
+        // ─────────────────────────────────────────────────────────
+        stage('Run Newman API Tests') {
+            steps {
+                echo '🧪 Running Postman/Newman API tests...'
+                script {
+                    if (isUnix()) {
+                        sh '''
+                            if command -v newman > /dev/null 2>&1; then
+                                mkdir -p postman-reports
+                                newman run "Eyewear-System.postman_collection.json" \
+                                    --timeout-request 10000 \
+                                    --timeout 120000 \
+                                    -r cli,json \
+                                    --reporter-json-export ./postman-reports/summary-eyewear.json \
+                                    --suppress-exit-code || true
+                                echo "✅ Newman tests completed."
+                            else
+                                echo "⚠️ Newman not installed. Skipping API tests."
+                            fi
+                        '''
+                    } else {
+                        bat '''
+                            where newman >nul 2>nul
+                            if %ERRORLEVEL% EQU 0 (
+                                if not exist postman-reports mkdir postman-reports
+                                newman run "Eyewear-System.postman_collection.json" ^
+                                    --timeout-request 10000 ^
+                                    --timeout 120000 ^
+                                    -r cli,json ^
+                                    --reporter-json-export ./postman-reports/summary-eyewear.json ^
+                                    --suppress-exit-code
+                                echo Newman tests completed.
+                            ) else (
+                                echo Newman not installed. Skipping API tests.
+                            )
+                            exit /b 0
+                        '''
+                    }
+                }
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────
+        // 9. NOTIFY JIRA
         // Đăng kết quả build vào Jira dùng REST API v3
         // Requires credential: JIRA_CREDS (username:api_token)
         // ─────────────────────────────────────────────────────────
@@ -280,7 +313,7 @@ pipeline {
         always {
             echo '📦 Archiving artifacts...'
             archiveArtifacts(
-                artifacts: 'README.md,docs/**/*.md,docs/**/*.docx,Eyewear-System.postman_collection.json',
+                artifacts: 'README.md,docs/**/*.md,docs/**/*.docx,Eyewear-System.postman_collection.json,postman-reports/**',
                 allowEmptyArchive: true
             )
         }
