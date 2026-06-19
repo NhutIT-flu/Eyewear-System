@@ -21,7 +21,6 @@ class SupportTicketController extends BaseController
      */
     public function index()
     {
-        return \Core\ApiResponse::serverError('Support database is currently in read-only mode');
         $userId = $this->getUserId();
         if (!$userId) {
             return ApiResponse::unauthorized();
@@ -71,7 +70,6 @@ class SupportTicketController extends BaseController
      */
     public function store()
     {
-        return \Core\ApiResponse::serverError('Cannot upload attachment to cloud storage');
         $userId = $this->getUserId();
         if (!$userId) {
             return ApiResponse::unauthorized();
