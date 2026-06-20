@@ -151,7 +151,7 @@ Router::group(['prefix' => 'api/v1'], function () {
         });
 
         Router::group(['prefix' => 'ops'], function () {
-            Router::get('/', [OperationsController::class, 'index'])->middleware('permission:view_orders|pack_order|create_shipment|update_order_status');
+            Router::get('/', [OperationsController::class, 'index'])->middleware('role:ADMIN|MANAGER|SALES_STAFF|OPERATIONS_STAFF');
             Router::post('advance', [OperationsController::class, 'advanceProduction'])->middleware('permission:update_order_status');
             Router::post('shipments', [OperationsController::class, 'createShipment'])->middleware('permission:create_shipment');
             Router::put('shipments', [OperationsController::class, 'updateShipment'])->middleware('permission:update_tracking');
@@ -161,11 +161,11 @@ Router::group(['prefix' => 'api/v1'], function () {
         Router::group(['prefix' => 'admin'], function () {
             
             Router::group(['prefix' => 'inventory'], function () {
-                Router::get('/', [InventoryController::class, 'index'])->middleware('permission:manage_products|process_preorder_inventory');
+                Router::get('/', [InventoryController::class, 'index'])->middleware('role:ADMIN|MANAGER|SALES_STAFF|OPERATIONS_STAFF');
                 Router::put('stock', [InventoryController::class, 'updateStock'])->middleware('permission:manage_products|process_preorder_inventory');
             });
 
-            Router::group(['prefix' => 'products', 'middleware' => 'permission:manage_products'], function () {
+            Router::group(['prefix' => 'products', 'middleware' => 'role:ADMIN|MANAGER'], function () {
                 Router::post('/', [ProductController::class, 'store']);
                 Router::put('/', [ProductController::class, 'update']);
                 Router::put('{id}', [ProductController::class, 'update']);
@@ -193,7 +193,7 @@ Router::group(['prefix' => 'api/v1'], function () {
             });
         });
 
-        Router::group(['prefix' => 'dashboard', 'middleware' => 'permission:view_reports'], function () {
+        Router::group(['prefix' => 'dashboard', 'middleware' => 'role:ADMIN|MANAGER'], function () {
             Router::get('/', [DashboardController::class, 'index']);
             Router::get('operations', [DashboardController::class, 'operations']);
             Router::get('sales-report', [DashboardController::class, 'salesReport']);

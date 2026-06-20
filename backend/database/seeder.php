@@ -180,9 +180,11 @@ try {
         if ($roleId) {
             foreach ($perms as $perm) {
                 $permId = $pdo->query("SELECT id FROM permissions WHERE name = '$perm'")->fetchColumn();
-                if ($permId) {
-                    $pdo->exec("INSERT IGNORE INTO role_permissions (role_id, permission_id) VALUES ($roleId, $permId)");
+                if (!$permId) {
+                    $pdo->prepare("INSERT INTO permissions (name) VALUES (?)")->execute([$perm]);
+                    $permId = $pdo->lastInsertId();
                 }
+                $pdo->exec("INSERT IGNORE INTO role_permissions (role_id, permission_id) VALUES ($roleId, $permId)");
             }
         }
     }

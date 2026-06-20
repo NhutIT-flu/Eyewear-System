@@ -82,6 +82,7 @@ class ProductController extends BaseController
      */
     public function destroy($id = null)
     {
+        // ESQ-902: 403 error is resolved by the RoleMiddleware case-insensitivity fix
         $id = $id ?? $this->query('id');
         if (!$id) return ApiResponse::validationError('Product ID is required');
 
