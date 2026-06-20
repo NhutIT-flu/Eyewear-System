@@ -79,9 +79,9 @@ class AdminService
 
         $checkStmt = $db->prepare("SELECT id FROM `user` WHERE email = ?");
         $checkStmt->execute([$data['email']]);
-        if ($checkStmt->fetch()) {
-            throw new \Exception('Email already exists');
-        }
+        $existingUser = $checkStmt->fetch(
+            \PDO::FETCH_ASSOC
+        );
 
         $roleStmt = $db->prepare("SELECT id, name FROM role WHERE id = ? AND name IN (" . $this->allowedRolesSql() . ")");
         $roleStmt->execute([$data['role_id']]);
@@ -93,6 +93,22 @@ class AdminService
         $passwordHash = password_hash($data['password'], PASSWORD_DEFAULT);
         $status = $data['status'] ?? 'active';
         $phone = $data['phone'] ?? null;
+
+        if ($existingUser) {
+            $userId = (int) $existingUser['id'];
+
+            $stmt = $db->prepare(
+                "UPDATE `user`
+                 SET full_name = ?, password_hash = ?, phone = ?, status = ?
+                 WHERE id = ?"
+            );
+            $stmt->execute([$data['full_name'], $passwordHash, $phone, $status, $userId]);
+
+            $db->prepare("DELETE FROM user_roles WHERE user_id = ?")->execute([$userId]);
+            $db->prepare("INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)")->execute([$userId, $data['role_id']]);
+
+            return $this->getStaffById($userId);
+        }
 
         $stmt = $db->prepare(
             "INSERT INTO `user` (full_name, email, password_hash, phone, status)
