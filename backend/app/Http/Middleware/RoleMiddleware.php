@@ -16,10 +16,11 @@ class RoleMiddleware
             return false;
         }
 
+        $allowedRoles = array_map('strtoupper', $allowedRoles);
         $currentRoles = explode(',', $currentRolesStr);
         $hasPermission = false;
         foreach ($currentRoles as $role) {
-            if (in_array(trim($role), $allowedRoles, true)) {
+            if (in_array(strtoupper(trim($role)), $allowedRoles, true)) {
                 $hasPermission = true;
                 break;
             }
