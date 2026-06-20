@@ -178,12 +178,15 @@ pipeline {
                             where composer >nul 2>nul
                             if %ERRORLEVEL% EQU 0 (
                                 call composer install --no-interaction --prefer-dist --quiet
-                                set XDEBUG_MODE=coverage
-                                call vendor\\bin\\phpunit --coverage-clover tests/coverage.xml --log-junit tests/junit.xml --colors=never
-                                echo PHPUnit tests completed.
+                            ) else if exist composer.phar (
+                                php composer.phar install --no-interaction --prefer-dist --quiet
                             ) else (
                                 echo Composer not found — skipping PHPUnit tests.
+                                exit /b 0
                             )
+                            set XDEBUG_MODE=coverage
+                            call vendor\bin\phpunit --coverage-clover tests/coverage.xml --log-junit tests/junit.xml --colors=never
+                            echo PHPUnit tests completed.
                             exit /b 0
                         '''
                     }

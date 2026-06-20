@@ -7,25 +7,23 @@ use App\Http\Middleware\AuthMiddleware;
 
 /**
  * Unit tests for AuthMiddleware
- * Kiểm tra logic xác thực Bearer token.
+ * Comprehensive coverage of token extraction, validation, and guard logic.
  */
 class AuthMiddlewareTest extends TestCase
 {
     protected function setUp(): void
     {
         parent::setUp();
-        // Reset auth state
-        unset(
-            $_SERVER['HTTP_AUTHORIZATION'],
-            $_SERVER['REDIRECT_HTTP_AUTHORIZATION'],
-            $_SERVER['AUTH_TOKEN'],
-            $_SERVER['AUTH_USER_ID'],
-            $_SERVER['AUTH_USER_ROLE'],
-            $_SERVER['AUTH_TOKEN_GUARD']
-        );
+        $this->clearAuthState();
     }
 
     protected function tearDown(): void
+    {
+        $this->clearAuthState();
+        parent::tearDown();
+    }
+
+    private function clearAuthState(): void
     {
         unset(
             $_SERVER['HTTP_AUTHORIZATION'],
@@ -35,12 +33,11 @@ class AuthMiddlewareTest extends TestCase
             $_SERVER['AUTH_USER_ROLE'],
             $_SERVER['AUTH_TOKEN_GUARD']
         );
-        parent::tearDown();
     }
 
-    // ─────────────────────────────────────────────────────────
-    // Missing / empty token
-    // ─────────────────────────────────────────────────────────
+    // ═════════════════════════════════════════════════════════════
+    //  Missing / empty token
+    // ═════════════════════════════════════════════════════════════
 
     public function test_returns_false_when_no_authorization_header(): void
     {
@@ -51,6 +48,7 @@ class AuthMiddlewareTest extends TestCase
         $this->assertFalse($result);
         $decoded = json_decode($output, true);
         $this->assertFalse($decoded['success']);
+        $this->assertStringContainsString('Missing', $decoded['message']);
     }
 
     public function test_returns_false_when_empty_authorization_header(): void
@@ -64,9 +62,9 @@ class AuthMiddlewareTest extends TestCase
         $this->assertFalse($result);
     }
 
-    // ─────────────────────────────────────────────────────────
-    // Invalid tokens
-    // ─────────────────────────────────────────────────────────
+    // ═════════════════════════════════════════════════════════════
+    //  Invalid tokens
+    // ═════════════════════════════════════════════════════════════
 
     public function test_returns_false_for_non_base64_token(): void
     {
@@ -79,21 +77,21 @@ class AuthMiddlewareTest extends TestCase
         $this->assertFalse($result);
     }
 
-    public function test_returns_false_for_token_without_colon_separator(): void
+    public function test_returns_false_for_token_without_colon(): void
     {
-        // base64 of "justtext" — no colon separator
         $_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . base64_encode('justtext');
 
         ob_start();
         $result = AuthMiddleware::handle();
-        ob_get_clean();
+        $output = ob_get_clean();
 
         $this->assertFalse($result);
+        $decoded = json_decode($output, true);
+        $this->assertStringContainsString('Invalid', $decoded['message']);
     }
 
-    public function test_returns_false_for_token_with_non_numeric_user_id(): void
+    public function test_returns_false_for_non_numeric_user_id(): void
     {
-        // base64 of "abc:admin" — user_id is not numeric
         $_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . base64_encode('abc:admin');
 
         ob_start();
@@ -103,13 +101,23 @@ class AuthMiddlewareTest extends TestCase
         $this->assertFalse($result);
     }
 
-    // ─────────────────────────────────────────────────────────
-    // Valid tokens
-    // ─────────────────────────────────────────────────────────
-
-    public function test_returns_true_for_valid_token(): void
+    public function test_returns_false_for_basic_auth_header(): void
     {
-        // base64 of "1:admin" — valid format
+        $_SERVER['HTTP_AUTHORIZATION'] = 'Basic dXNlcjpwYXNz';
+
+        ob_start();
+        $result = AuthMiddleware::handle();
+        ob_get_clean();
+
+        $this->assertFalse($result);
+    }
+
+    // ═════════════════════════════════════════════════════════════
+    //  Valid tokens — various roles
+    // ═════════════════════════════════════════════════════════════
+
+    public function test_valid_admin_token(): void
+    {
         $token = base64_encode('1:admin');
         $_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $token;
 
@@ -123,7 +131,7 @@ class AuthMiddlewareTest extends TestCase
         $this->assertEquals($token, $_SERVER['AUTH_TOKEN']);
     }
 
-    public function test_valid_token_with_customer_role(): void
+    public function test_valid_customer_token(): void
     {
         $token = base64_encode('42:customer');
         $_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $token;
@@ -137,9 +145,22 @@ class AuthMiddlewareTest extends TestCase
         $this->assertEquals('customer', $_SERVER['AUTH_USER_ROLE']);
     }
 
+    public function test_valid_staff_token(): void
+    {
+        $token = base64_encode('7:staff');
+        $_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $token;
+
+        ob_start();
+        $result = AuthMiddleware::handle();
+        ob_get_clean();
+
+        $this->assertTrue($result);
+        $this->assertEquals(7, $_SERVER['AUTH_USER_ID']);
+        $this->assertEquals('staff', $_SERVER['AUTH_USER_ROLE']);
+    }
+
     public function test_valid_token_with_three_parts(): void
     {
-        // base64 of "5:staff:extra" — 3 parts, should still work
         $token = base64_encode('5:staff:extra');
         $_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $token;
 
@@ -152,26 +173,35 @@ class AuthMiddlewareTest extends TestCase
         $this->assertEquals('staff', $_SERVER['AUTH_USER_ROLE']);
     }
 
-    // ─────────────────────────────────────────────────────────
-    // Guard parameter
-    // ─────────────────────────────────────────────────────────
+    // ═════════════════════════════════════════════════════════════
+    //  Guard parameter
+    // ═════════════════════════════════════════════════════════════
 
     public function test_stores_guard_parameter(): void
     {
-        $token = base64_encode('1:admin');
-        $_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $token;
+        $_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . base64_encode('1:admin');
 
         ob_start();
-        $result = AuthMiddleware::handle('sanctum');
+        AuthMiddleware::handle('sanctum');
         ob_get_clean();
 
-        $this->assertTrue($result);
         $this->assertEquals('sanctum', $_SERVER['AUTH_TOKEN_GUARD']);
     }
 
-    // ─────────────────────────────────────────────────────────
-    // REDIRECT_HTTP_AUTHORIZATION fallback
-    // ─────────────────────────────────────────────────────────
+    public function test_null_guard_by_default(): void
+    {
+        $_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . base64_encode('1:admin');
+
+        ob_start();
+        AuthMiddleware::handle();
+        ob_get_clean();
+
+        $this->assertNull($_SERVER['AUTH_TOKEN_GUARD']);
+    }
+
+    // ═════════════════════════════════════════════════════════════
+    //  REDIRECT_HTTP_AUTHORIZATION fallback
+    // ═════════════════════════════════════════════════════════════
 
     public function test_reads_from_redirect_http_authorization(): void
     {
@@ -186,18 +216,79 @@ class AuthMiddlewareTest extends TestCase
         $this->assertEquals(10, $_SERVER['AUTH_USER_ID']);
     }
 
-    // ─────────────────────────────────────────────────────────
-    // Non-Bearer auth header
-    // ─────────────────────────────────────────────────────────
+    // ═════════════════════════════════════════════════════════════
+    //  Combined / multiple Bearer tokens
+    // ═════════════════════════════════════════════════════════════
 
-    public function test_returns_false_for_basic_auth_header(): void
+    public function test_combined_bearer_tokens_uses_last(): void
     {
-        $_SERVER['HTTP_AUTHORIZATION'] = 'Basic dXNlcjpwYXNz';
+        $token1 = base64_encode('1:admin');
+        $token2 = base64_encode('2:staff');
+        $_SERVER['HTTP_AUTHORIZATION'] = "Bearer $token1, Bearer $token2";
 
         ob_start();
         $result = AuthMiddleware::handle();
         ob_get_clean();
 
-        $this->assertFalse($result);
+        $this->assertTrue($result);
+        // Should use the LAST Bearer token
+        $this->assertEquals(2, $_SERVER['AUTH_USER_ID']);
+        $this->assertEquals('staff', $_SERVER['AUTH_USER_ROLE']);
+    }
+
+    public function test_single_bearer_via_regex(): void
+    {
+        $token = base64_encode('99:admin');
+        $_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $token;
+
+        ob_start();
+        $result = AuthMiddleware::handle();
+        ob_get_clean();
+
+        $this->assertTrue($result);
+        $this->assertEquals(99, $_SERVER['AUTH_USER_ID']);
+    }
+
+    // ═════════════════════════════════════════════════════════════
+    //  Edge cases
+    // ═════════════════════════════════════════════════════════════
+
+    public function test_bearer_lowercase_still_works(): void
+    {
+        $token = base64_encode('3:admin');
+        $_SERVER['HTTP_AUTHORIZATION'] = 'bearer ' . $token;
+
+        ob_start();
+        $result = AuthMiddleware::handle();
+        ob_get_clean();
+
+        $this->assertTrue($result);
+    }
+
+    public function test_user_id_zero_is_not_numeric_enough(): void
+    {
+        $token = base64_encode('0:guest');
+        $_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $token;
+
+        ob_start();
+        $result = AuthMiddleware::handle();
+        ob_get_clean();
+
+        // 0 is numeric, so should pass
+        $this->assertTrue($result);
+        $this->assertEquals(0, $_SERVER['AUTH_USER_ID']);
+    }
+
+    public function test_large_user_id(): void
+    {
+        $token = base64_encode('999999:admin');
+        $_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $token;
+
+        ob_start();
+        $result = AuthMiddleware::handle();
+        ob_get_clean();
+
+        $this->assertTrue($result);
+        $this->assertEquals(999999, $_SERVER['AUTH_USER_ID']);
     }
 }
