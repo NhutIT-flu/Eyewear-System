@@ -341,7 +341,6 @@ jobs:
         }
 
         // ── Auto-close bugs whose API now passes ──────────────────────────
-        let closedCount = 0;
         for (const issue of openCiBugs) {
           const summary = normalize(issue?.fields?.summary || "");
           const labels  = issue?.fields?.labels || [];
