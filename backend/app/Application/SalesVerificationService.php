@@ -158,20 +158,50 @@ class SalesVerificationService
     /**
      * Cập nhật thông số độ cận (Prescription) cho một item trong đơn hàng
      */
+    /**
+     * Get all order complaints (support tickets for complaints).
+     */
+    public function getOrderComplaints(): array
+    {
+        $db = Database::getInstance();
+        $stmt = $db->query("SELECT * FROM supportticket WHERE subject LIKE '[COMPLAINT]%' ORDER BY created_at DESC");
+        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+    }
+
     public function updatePrescription(int $orderItemId, array $data): bool
     {
         $db = Database::getInstance();
         
         // Find the prescription_id for this order item
-        $stmt = $db->prepare("SELECT prescription_id FROM orderitem WHERE id = ?");
+        $stmt = $db->prepare("SELECT prescription_id, order_id FROM orderitem WHERE id = ?");
         $stmt->execute([$orderItemId]);
         $item = $stmt->fetch(\PDO::FETCH_ASSOC);
         
-        if (!$item || !$item['prescription_id']) {
-            throw new \Exception('Prescription not found for this item');
+        if (!$item) {
+            throw new \Exception('Order item not found');
         }
         
         $prescriptionId = $item['prescription_id'];
+
+        if (!$prescriptionId) {
+            // Find user_id from order
+            $orderStmt = $db->prepare("SELECT user_id FROM `order` WHERE id = ?");
+            $orderStmt->execute([$item['order_id']]);
+            $order = $orderStmt->fetch(\PDO::FETCH_ASSOC);
+
+            if (!$order) {
+                throw new \Exception('Order not found for this item');
+            }
+
+            // Create a blank prescription for this user
+            $insertStmt = $db->prepare("INSERT INTO prescription (user_id) VALUES (?)");
+            $insertStmt->execute([$order['user_id']]);
+            $prescriptionId = $db->lastInsertId();
+
+            // Link it to the order item
+            $linkStmt = $db->prepare("UPDATE orderitem SET prescription_id = ? WHERE id = ?");
+            $linkStmt->execute([$prescriptionId, $orderItemId]);
+        }
         
         $fields = ['sph_od', 'sph_os', 'cyl_od', 'cyl_os', 'axis_od', 'axis_os', 'pd', 'notes'];
         $updates = [];

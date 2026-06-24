@@ -92,35 +92,29 @@ class OperationsService
 			throw new \Exception('Order not found');
 		}
 
-		if ($order->shipment()) {
-			throw new \Exception('Shipment already exists for this order');
-		}
-
-		$db = Database::getInstance();
-		$stmt = $db->prepare("SELECT COUNT(*) FROM orderitem WHERE order_id = ? AND (lens_id IS NOT NULL OR prescription_id IS NOT NULL)");
-		$stmt->execute([$orderId]);
-		$needsLab = (int) $stmt->fetchColumn() > 0;
-
-		$readyForShip = $order->status === 'shipped'
-			|| $order->status === 'delivered'
-			|| $order->production_step === 'ready_to_ship'
-			|| (!$needsLab && $order->production_step === 'packaging');
-
-		if (!$readyForShip) {
-			throw new \Exception('Order must complete all production steps before shipping');
-		}
-
-        $orderService = new \App\Application\OrderService();
 		$shippingStatus = $payload['shipping_status'] ?? 'shipping'; // Default to shipping
 		$now = date('Y-m-d H:i:s');
 
-		$shipment = Shipment::create([
-			'order_id' => $orderId,
+		$shipment = $order->shipment();
+		$shipmentData = [
 			'courier' => $this->normalizeString($payload['courier'] ?? null),
 			'tracking_number' => $this->normalizeString($payload['tracking_number'] ?? null) ?: $this->generateTrackingNumber($orderId),
 			'shipping_status' => $shippingStatus,
-			'shipped_at' => $now,
-		]);
+		];
+
+		if ($shippingStatus === 'delivered') {
+			$shipmentData['delivered_at'] = $now;
+			$shipmentData['shipped_at'] = $shipment && $shipment->shipped_at ? $shipment->shipped_at : $now;
+		} else {
+			$shipmentData['shipped_at'] = $shipment && $shipment->shipped_at ? $shipment->shipped_at : $now;
+			$shipmentData['delivered_at'] = null;
+		}
+
+		if ($shipment) {
+			$shipment->update($shipmentData);
+		} else {
+			$shipment = Shipment::create(array_merge(['order_id' => $orderId], $shipmentData));
+		}
 
         // Move order to SHIPPED and ensure production step is marked ready_to_ship
         $order->update([
