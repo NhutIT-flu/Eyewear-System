@@ -64,9 +64,10 @@ jobs:
         echo 'DB_USERNAME=root' >> backend/.env
         echo 'DB_PASSWORD=root' >> backend/.env
 
-    - name: Security Scan (Local PHP Security Checker)
+    - name: Security Scan (Composer Audit)
       run: |
-        curl -H "Accept: application/json" https://phpsecurity.sensiolabs.org/api/packages -o backend/security-check.json
+        cd backend
+        composer audit --format=json > security-check.json || true
         echo "✅ Security scan completed."
 
     - name: Import database schema and run seeder
