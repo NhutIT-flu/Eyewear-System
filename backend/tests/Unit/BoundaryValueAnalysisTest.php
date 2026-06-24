@@ -133,4 +133,45 @@ class BoundaryValueAnalysisTest extends TestCase
         $this->assertStringNotContainsString('base_price >=', $result['sql']);
         $this->assertEmpty($result['params']);
     }
+
+    /**
+     * Test BVA: Tổ hợp min_price > max_price
+     */
+    public function test_bva_min_greater_than_max(): void
+    {
+        $result = $this->filter->buildFilterQuery([
+            'min_price' => 100.0,
+            'max_price' => 50.0
+        ]);
+        
+        $this->assertStringContainsString('p.base_price >= ?', $result['sql']);
+        $this->assertStringContainsString('p.base_price <= ?', $result['sql']);
+        $this->assertEquals([100.0, 50.0], $result['params']);
+    }
+
+    /**
+     * Test BVA: Tổ hợp min_price = max_price
+     */
+    public function test_bva_min_equal_to_max(): void
+    {
+        $result = $this->filter->buildFilterQuery([
+            'min_price' => 100.0,
+            'max_price' => 100.0
+        ]);
+        
+        $this->assertStringContainsString('p.base_price >= ?', $result['sql']);
+        $this->assertStringContainsString('p.base_price <= ?', $result['sql']);
+        $this->assertEquals([100.0, 100.0], $result['params']);
+    }
+
+    /**
+     * Test BVA: Tham số giá là null
+     */
+    public function test_bva_null_price(): void
+    {
+        $result = $this->filter->buildFilterQuery(['min_price' => null]);
+        
+        $this->assertStringNotContainsString('base_price >=', $result['sql']);
+        $this->assertEmpty($result['params']);
+    }
 }

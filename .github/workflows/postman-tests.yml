@@ -115,7 +115,8 @@ jobs:
       run: |
         cd backend
         if [ -f vendor/bin/phpunit ]; then
-          vendor/bin/phpunit --coverage-html ../phpunit-coverage || true
+          mkdir -p ../phpunit-reports
+          vendor/bin/phpunit --coverage-html ../phpunit-coverage --testdox-html ../phpunit-reports/bva-ep-report.html || true
           echo "✅ PHPUnit tests completed."
         else
           echo "⚠️ PHPUnit not found. Skipping whitebox tests."
@@ -519,6 +520,7 @@ jobs:
         path: |
           postman-reports/
           phpunit-coverage/
+          phpunit-reports/
           backend/security-check.json
 
     - name: Send Discord Notification
