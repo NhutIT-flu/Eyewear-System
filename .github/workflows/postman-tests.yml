@@ -87,16 +87,6 @@ jobs:
         php backend/database/seeder.php
         echo "✅ Database seeded successfully."
 
-    - name: Run PHPUnit Tests & Coverage
-      run: |
-        cd backend
-        if [ -f vendor/bin/phpunit ]; then
-          vendor/bin/phpunit --coverage-html ../phpunit-coverage || true
-          echo "✅ PHPUnit tests completed."
-        else
-          echo "⚠️ PHPUnit not found. Skipping whitebox tests."
-        fi
-
     - name: Start PHP backend server
       run: |
         php -S 127.0.0.1:8000 -t backend/public backend/public/index.php > /tmp/php-server.log 2>&1 &
@@ -119,6 +109,16 @@ jobs:
           echo "❌ Server failed to start after $MAX_RETRIES attempts. PHP log:"
           cat /tmp/php-server.log
           exit 1
+        fi
+
+    - name: Run PHPUnit Tests & Coverage
+      run: |
+        cd backend
+        if [ -f vendor/bin/phpunit ]; then
+          vendor/bin/phpunit --coverage-html ../phpunit-coverage || true
+          echo "✅ PHPUnit tests completed."
+        else
+          echo "⚠️ PHPUnit not found. Skipping whitebox tests."
         fi
 
     - name: Setup Node.js Environment
