@@ -48,6 +48,11 @@ jobs:
         key: ${{ runner.os }}-composer-${{ hashFiles('backend/composer.lock') }}
         restore-keys: ${{ runner.os }}-composer-
 
+    - name: Install Dependencies (Composer)
+      run: |
+        cd backend
+        composer install --no-interaction --prefer-dist --optimize-autoloader
+
     - name: Create .env file for CI
       run: |
         echo 'APP_NAME=Eyewear Backend' > backend/.env
@@ -390,7 +395,7 @@ jobs:
 
         let cachedBranches = "";
         try {
-          cachedBranches = execSync("git ls-remote --heads origin", { encoding: "utf8" });
+          cachedBranches = execSync("git ls-remote --heads origin 2>/dev/null", { encoding: "utf8" });
         } catch (e) { }
 
         for (const [index, bug] of failures.entries()) {
