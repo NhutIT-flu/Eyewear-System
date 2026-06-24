@@ -87,6 +87,19 @@ class SalesController extends BaseController
     }
 
     /**
+     * Get order complaint tickets for sales staff.
+     */
+    public function orderComplaints()
+    {
+        try {
+            $complaints = $this->salesService->getOrderComplaints($_GET);
+            return ApiResponse::success($complaints);
+        } catch (Exception $e) {
+            return ApiResponse::serverError($e->getMessage());
+        }
+    }
+
+    /**
      * Update prescription for an order item.
      */
     public function updatePrescription()
