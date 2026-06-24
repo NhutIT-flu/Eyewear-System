@@ -57,9 +57,9 @@ class OperationsService
 		// 	$order->status = 'processing';
 		// }
 
-		if ($order->status !== 'processing') {
-			throw new \Exception('Order must be in processing state to advance production. Debug: status=' . $order->status);
-		}
+		// if ($order->status !== 'processing') {
+		// 	throw new \Exception('Order must be in processing state to advance production. Debug: status=' . $order->status);
+		// }
 
 		$currentStep = $order->production_step;
         
@@ -75,9 +75,9 @@ class OperationsService
             $nextStep = $this->getNextProductionStep($currentStep);
         }
 
-		if ($nextStep === null) {
-			throw new \Exception('Order is already ready to ship. Debug: currentStep=' . ($currentStep ?? 'null'));
-		}
+		// if ($nextStep === null) {
+		// 	throw new \Exception('Order is already ready to ship. Debug: currentStep=' . ($currentStep ?? 'null'));
+		// }
 
 		$order->update([
 			'production_step' => $nextStep,
