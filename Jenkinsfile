@@ -47,6 +47,54 @@ pipeline {
                     def gitBranch = env.GIT_BRANCH ?: env.BRANCH_NAME ?: 'unknown'
                     currentBuild.displayName = "#${BUILD_NUMBER} — ${gitBranch}"
                     currentBuild.description = "Commit: ${gitCommit}"
+
+                    // Get list of changed files
+                    def changedFilesStr = ""
+                    try {
+                        def targetBranch = (gitBranch == 'main' || gitBranch == 'origin/main') ? 'HEAD~1' : 'origin/main'
+                        echo "🔍 Finding changed files compared to ${targetBranch}..."
+                        if (isUnix()) {
+                            changedFilesStr = sh(script: "git diff --name-only ${targetBranch} || git diff --name-only HEAD~1 || true", returnStdout: true).trim()
+                        } else {
+                            changedFilesStr = bat(script: "@git diff --name-only ${targetBranch} 2>nul || @git diff --name-only HEAD~1 2>nul || (exit /b 0)", returnStdout: true).trim()
+                        }
+                    } catch (Exception e) {
+                        echo "⚠️ Warning: Could not get changed files: ${e.message}"
+                    }
+
+                    // Store in file and env
+                    writeFile file: 'changed_files.txt', text: changedFilesStr
+                    env.CHANGED_FILES = changedFilesStr
+
+                    def changedFilesList = changedFilesStr.split('\r?\n').collect { it.trim() }.findAll { it }
+                    echo "📋 Changed files: ${changedFilesList}"
+
+                    if (changedFilesList.isEmpty()) {
+                        echo "No changed files detected or first build. Running full pipeline stages."
+                        env.FORCE_ALL = 'true'
+                        env.BACKEND_CHANGED = 'true'
+                        env.FRONTEND_CHANGED = 'true'
+                        env.SONAR_CHANGED = 'true'
+                        env.SONAR_INCLUSIONS = ''
+                    } else {
+                        env.FORCE_ALL = 'false'
+                        
+                        def backendChanged = changedFilesList.any { it.startsWith('backend/') }
+                        def frontendChanged = changedFilesList.any { it.startsWith('frontend/') }
+                        env.BACKEND_CHANGED = backendChanged ? 'true' : 'false'
+                        env.FRONTEND_CHANGED = frontendChanged ? 'true' : 'false'
+
+                        def sonarSources = ['backend/app', 'backend/core', 'backend/routes', 'frontend/js']
+                        def hasSonarChanges = changedFilesList.any { file ->
+                            sonarSources.any { source -> file.startsWith(source) }
+                        }
+                        env.SONAR_CHANGED = hasSonarChanges ? 'true' : 'false'
+
+                        def sonarInclusions = changedFilesList.findAll { file ->
+                            sonarSources.any { source -> file.startsWith(source) }
+                        }.join(',')
+                        env.SONAR_INCLUSIONS = sonarInclusions
+                    }
                 }
             }
         }
@@ -93,17 +141,35 @@ pipeline {
                                 sh '''
                                     if command -v php > /dev/null 2>&1; then
                                         ERRORS=0
-                                        while IFS= read -r -d '' file; do
-                                            if ! php -l "$file" > /dev/null 2>&1; then
-                                                php -l "$file"
-                                                ERRORS=$((ERRORS + 1))
+                                        if [ "${FORCE_ALL}" = "true" ]; then
+                                            echo "Running full PHP syntax check..."
+                                            while IFS= read -r -d '' file; do
+                                                if ! php -l "$file" > /dev/null 2>&1; then
+                                                    php -l "$file"
+                                                    ERRORS=$((ERRORS + 1))
+                                                fi
+                                            done < <(find backend -name "*.php" -not -path "*/vendor/*" -print0)
+                                        else
+                                            echo "Running incremental PHP syntax check..."
+                                            if [ -f changed_files.txt ]; then
+                                                while IFS= read -r file; do
+                                                    if [[ "$file" =~ \.php$ ]] && [[ "$file" =~ ^backend/ ]] && [[ ! "$file" =~ vendor/ ]]; then
+                                                        if [ -f "$file" ]; then
+                                                            echo "Checking $file"
+                                                            if ! php -l "$file" > /dev/null 2>&1; then
+                                                                php -l "$file"
+                                                                ERRORS=$((ERRORS + 1))
+                                                            fi
+                                                        fi
+                                                    fi
+                                                done < changed_files.txt
                                             fi
-                                        done < <(find backend -name "*.php" -not -path "*/vendor/*" -print0)
+                                        fi
                                         if [ $ERRORS -gt 0 ]; then
                                             echo "❌ Found $ERRORS PHP syntax error(s)."
                                             exit 1
                                         fi
-                                        echo "✅ All PHP files pass syntax check."
+                                        echo "✅ PHP syntax check completed."
                                     else
                                         echo "⚠️ PHP CLI not found — skipping."
                                     fi
@@ -113,9 +179,31 @@ pipeline {
                                     where php >nul 2>nul
                                     if %ERRORLEVEL% EQU 0 (
                                         set ERRORS=0
-                                        for /R backend %%f in (*.php) do (
-                                            echo %%f | findstr /i "vendor" >nul
-                                            if errorlevel 1 php -l "%%f"
+                                        if "%FORCE_ALL%"=="true" (
+                                            echo Running full PHP syntax check...
+                                            for /R backend %%f in (*.php) do (
+                                                echo %%f | findstr /i "vendor" >nul
+                                                if errorlevel 1 php -l "%%f"
+                                            )
+                                        ) else (
+                                            echo Running incremental PHP syntax check...
+                                            if exist changed_files.txt (
+                                                for /F "tokens=*" %%f in (changed_files.txt) do (
+                                                    echo %%f | findstr /i /r "\.php$" >nul
+                                                    if not errorlevel 1 (
+                                                        echo %%f | findstr /i /r "^backend/" >nul
+                                                        if not errorlevel 1 (
+                                                            echo %%f | findstr /i "vendor" >nul
+                                                            if errorlevel 1 (
+                                                                if exist %%f (
+                                                                    echo Checking %%f
+                                                                    php -l "%%f"
+                                                                )
+                                                            )
+                                                        )
+                                                    )
+                                                )
+                                            )
                                         )
                                     ) else (
                                         echo PHP CLI not found — skipping.
@@ -154,6 +242,12 @@ pipeline {
         //  Cài PHPUnit qua Composer, chạy test, sinh coverage.xml
         // ═════════════════════════════════════════════════════════
         stage('PHPUnit Tests') {
+            when {
+                anyOf {
+                    expression { return env.FORCE_ALL == 'true' }
+                    expression { return env.BACKEND_CHANGED == 'true' }
+                }
+            }
             steps {
                 echo '🧪 Running PHPUnit unit tests with coverage...'
                 script {
@@ -199,23 +293,32 @@ pipeline {
         //  Chỉ truyền version (dynamic) và token (secret) qua CLI
         // ═════════════════════════════════════════════════════════
         stage('SonarQube Analysis') {
+            when {
+                anyOf {
+                    expression { return env.FORCE_ALL == 'true' }
+                    expression { return env.SONAR_CHANGED == 'true' }
+                }
+            }
             steps {
                 echo '📊 Running SonarQube code quality analysis...'
                 withCredentials([string(credentialsId: 'SONAR_TOKEN', variable: 'SONAR_TOKEN')]) {
                     withSonarQubeEnv('SonarQube') {
                         script {
                             def scannerHome = tool 'sonar-scanner'
+                            def inclusionsParam = (env.FORCE_ALL == 'true') ? '' : "-Dsonar.inclusions=${env.SONAR_INCLUSIONS}"
                             if (isUnix()) {
                                 sh """
                                     "${scannerHome}/bin/sonar-scanner" \
                                         -Dsonar.projectVersion=1.0.${BUILD_NUMBER} \
-                                        -Dsonar.token=\$SONAR_TOKEN
+                                        -Dsonar.token=\$SONAR_TOKEN \
+                                        ${inclusionsParam}
                                 """
                             } else {
                                 bat """
                                     "${scannerHome}\\bin\\sonar-scanner.bat" ^
                                         -Dsonar.projectVersion=1.0.${BUILD_NUMBER} ^
-                                        -Dsonar.token=%SONAR_TOKEN%
+                                        -Dsonar.token=%SONAR_TOKEN% ^
+                                        ${inclusionsParam}
                                 """
                             }
                         }
@@ -229,6 +332,12 @@ pipeline {
         //  Chờ SonarQube webhook trả kết quả pass/fail
         // ═════════════════════════════════════════════════════════
         stage('Quality Gate') {
+            when {
+                anyOf {
+                    expression { return env.FORCE_ALL == 'true' }
+                    expression { return env.SONAR_CHANGED == 'true' }
+                }
+            }
             steps {
                 echo '🚦 Waiting for SonarQube Quality Gate...'
                 script {
@@ -248,6 +357,12 @@ pipeline {
         //  Chạy Postman collection → xuất report JSON + HTML
         // ═════════════════════════════════════════════════════════
         stage('Newman API Tests') {
+            when {
+                anyOf {
+                    expression { return env.FORCE_ALL == 'true' }
+                    expression { return env.BACKEND_CHANGED == 'true' }
+                }
+            }
             steps {
                 echo '🧪 Running Postman/Newman API tests...'
                 script {
@@ -293,6 +408,12 @@ pipeline {
         //  Phân tích kết quả Newman → hiện tổng số pass/fail
         // ═════════════════════════════════════════════════════════
         stage('Parse Test Results') {
+            when {
+                anyOf {
+                    expression { return env.FORCE_ALL == 'true' }
+                    expression { return env.BACKEND_CHANGED == 'true' }
+                }
+            }
             steps {
                 echo '📈 Parsing Newman test results...'
                 script {
