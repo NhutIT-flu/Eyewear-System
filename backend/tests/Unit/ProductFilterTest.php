@@ -227,4 +227,36 @@ class ProductFilterTest extends TestCase
         $result = $this->filter->buildFilterQuery(['active' => true]);
         $this->assertStringStartsWith(' WHERE', $result['sql']);
     }
+
+    // ─────────────────────────────────────────────────────────
+    // Database Execution
+    // ─────────────────────────────────────────────────────────
+
+    public function test_get_filtered_products_executes_query(): void
+    {
+        $pdoMock = $this->createMock(\PDO::class);
+        $stmtMock = $this->createMock(\PDOStatement::class);
+        
+        $stmtMock->expects($this->once())
+                 ->method('execute')
+                 ->with([1]);
+                 
+        $stmtMock->expects($this->once())
+                 ->method('fetchAll')
+                 ->with(\PDO::FETCH_ASSOC)
+                 ->willReturn([['id' => 10, 'name' => 'Ray-Ban Aviator', 'category_name' => 'Kính mát']]);
+
+        $pdoMock->expects($this->once())
+                ->method('prepare')
+                ->with($this->stringContains('p.category_id = ?'))
+                ->willReturn($stmtMock);
+
+        \Core\Database::setInstance($pdoMock);
+
+        $result = $this->filter->getFilteredProducts(['category_id' => 1]);
+
+        $this->assertCount(1, $result);
+        $this->assertEquals('Ray-Ban Aviator', $result[0]['name']);
+        $this->assertEquals('Kính mát', $result[0]['category_name']);
+    }
 }

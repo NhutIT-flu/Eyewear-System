@@ -28,8 +28,6 @@ pipeline {
         PROJECT_KEY        = 'ESQ'
         SONAR_PROJECT_KEY  = 'eyewear-system'
         SONAR_PROJECT_NAME = 'Eyewear System'
-        JAVA_HOME          = 'C:\\Program Files\\Java\\jdk-21.0.10'
-        PATH               = "D:\\MINHNHUT\\laragon\\bin\\php\\php-8.3.30-Win32-vs16-x64;${env.PATH}"
         NEWMAN_REPORT_DIR  = 'postman-reports'
     }
 
@@ -238,7 +236,7 @@ pipeline {
                         def qg = waitForQualityGate()
                         currentBuild.description += " | SonarQube: ${qg.status}"
                         if (qg.status != 'OK') {
-                            unstable "⚠️ Quality Gate: ${qg.status}"
+                            error "❌ Quality Gate failed: ${qg.status}. Pipeline is aborted."
                         }
                     }
                 }
@@ -376,8 +374,8 @@ pipeline {
                             ISSUES=\$(curl -s -X GET \\
                                 -H "Authorization: Basic ${authB64}" \\
                                 -H "Content-Type: application/json" \\
-                                "${jiraBase}/rest/api/3/search/jql?jql=${jqlEncoded}&maxResults=50&fields=summary" \\
-                                | grep -o '"key":"[^"]*"' | grep -o 'ESQ-[0-9]*' | head -5)
+                                "${jiraBase}/rest/api/3/search/jql?jql=${jqlEncoded}&maxResults=5&fields=summary" \\
+                                | jq -r '.issues[].key')
 
                             echo "Found Jira issues: \$ISSUES"
 
