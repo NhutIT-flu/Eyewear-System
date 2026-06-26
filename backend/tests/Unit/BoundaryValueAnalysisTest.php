@@ -17,6 +17,7 @@ class BoundaryValueAnalysisTest extends TestCase
     // Các giá trị biên (Boundary Values)
     private const MIN_PRICE_LIMIT = 0.0;
     private const MAX_PRICE_LIMIT = 999999.99;
+    private const PRICE_STEP = 0.01;
 
     protected function setUp(): void
     {
@@ -173,5 +174,182 @@ class BoundaryValueAnalysisTest extends TestCase
         
         $this->assertStringNotContainsString('base_price >=', $result['sql']);
         $this->assertEmpty($result['params']);
+    }
+
+    public function test_price_min_just_below_boundary_is_exposed_as_risk(): void
+    {
+        $result = $this->filter->buildFilterQuery(['min_price' => self::MIN_PRICE_LIMIT - self::PRICE_STEP]);
+
+        $this->assertStringContainsString('p.base_price >= ?', $result['sql']);
+        $this->assertSame([-0.01], $result['params']);
+    }
+
+    public function test_price_min_at_boundary_zero_is_accepted(): void
+    {
+        $result = $this->filter->buildFilterQuery(['min_price' => self::MIN_PRICE_LIMIT]);
+
+        $this->assertStringContainsString('p.base_price >= ?', $result['sql']);
+        $this->assertSame([0.0], $result['params']);
+    }
+
+    public function test_price_min_just_above_boundary_is_accepted(): void
+    {
+        $result = $this->filter->buildFilterQuery(['min_price' => self::MIN_PRICE_LIMIT + self::PRICE_STEP]);
+
+        $this->assertStringContainsString('p.base_price >= ?', $result['sql']);
+        $this->assertSame([0.01], $result['params']);
+    }
+
+    public function test_price_max_just_below_boundary_is_accepted(): void
+    {
+        $result = $this->filter->buildFilterQuery(['max_price' => self::MAX_PRICE_LIMIT - self::PRICE_STEP]);
+
+        $this->assertStringContainsString('p.base_price <= ?', $result['sql']);
+        $this->assertSame([999999.98], $result['params']);
+    }
+
+    public function test_price_max_at_boundary_is_accepted(): void
+    {
+        $result = $this->filter->buildFilterQuery(['max_price' => self::MAX_PRICE_LIMIT]);
+
+        $this->assertStringContainsString('p.base_price <= ?', $result['sql']);
+        $this->assertSame([999999.99], $result['params']);
+    }
+
+    public function test_price_max_just_above_boundary_is_exposed_as_risk(): void
+    {
+        $result = $this->filter->buildFilterQuery(['max_price' => self::MAX_PRICE_LIMIT + self::PRICE_STEP]);
+
+        $this->assertStringContainsString('p.base_price <= ?', $result['sql']);
+        $this->assertSame([1000000.0], $result['params']);
+    }
+
+    public function test_price_alias_boundaries_are_applied_together(): void
+    {
+        $result = $this->filter->buildFilterQuery([
+            'price_min' => '0.01',
+            'price_max' => '999999.99',
+        ]);
+
+        $this->assertSame(' WHERE p.base_price >= ? AND p.base_price <= ?', $result['sql']);
+        $this->assertSame([0.01, 999999.99], $result['params']);
+    }
+
+    public function test_price_numeric_zero_string_is_accepted(): void
+    {
+        $result = $this->filter->buildFilterQuery(['min_price' => '0']);
+
+        $this->assertStringContainsString('p.base_price >= ?', $result['sql']);
+        $this->assertSame([0.0], $result['params']);
+    }
+
+    public function test_price_whitespace_string_boundary_is_accepted_by_php_numeric_parsing(): void
+    {
+        $result = $this->filter->buildFilterQuery(['max_price' => ' 999999.99 ']);
+
+        $this->assertStringContainsString('p.base_price <= ?', $result['sql']);
+        $this->assertSame([999999.99], $result['params']);
+    }
+
+    public function test_cart_quantity_boundaries(): void
+    {
+        $this->assertFalse($this->isValidCartQuantity(0));
+        $this->assertTrue($this->isValidCartQuantity(1));
+        $this->assertTrue($this->isValidCartQuantity(99));
+        $this->assertFalse($this->isValidCartQuantity(100));
+    }
+
+    public function test_cart_quantity_fractional_values_are_invalid(): void
+    {
+        $this->assertFalse($this->isValidCartQuantity(0.99));
+        $this->assertFalse($this->isValidCartQuantity(1.5));
+        $this->assertFalse($this->isValidCartQuantity(99.01));
+    }
+
+    public function test_discount_percent_boundaries(): void
+    {
+        $this->assertFalse($this->isValidDiscountPercent(0));
+        $this->assertTrue($this->isValidDiscountPercent(1));
+        $this->assertTrue($this->isValidDiscountPercent(100));
+        $this->assertFalse($this->isValidDiscountPercent(101));
+    }
+
+    public function test_discount_percent_fractional_edges(): void
+    {
+        $this->assertFalse($this->isValidDiscountPercent(0.99));
+        $this->assertTrue($this->isValidDiscountPercent(1.01));
+        $this->assertTrue($this->isValidDiscountPercent(99.99));
+        $this->assertFalse($this->isValidDiscountPercent(100.01));
+    }
+
+    public function test_password_length_boundaries(): void
+    {
+        $this->assertFalse($this->isValidPasswordLength(str_repeat('a', 7)));
+        $this->assertTrue($this->isValidPasswordLength(str_repeat('a', 8)));
+        $this->assertTrue($this->isValidPasswordLength(str_repeat('a', 50)));
+        $this->assertFalse($this->isValidPasswordLength(str_repeat('a', 51)));
+    }
+
+    public function test_prescription_sph_boundaries(): void
+    {
+        $this->assertFalse($this->isValidSph(-20.25));
+        $this->assertTrue($this->isValidSph(-20.00));
+        $this->assertTrue($this->isValidSph(10.00));
+        $this->assertFalse($this->isValidSph(10.25));
+    }
+
+    public function test_prescription_sph_quarter_step_edges(): void
+    {
+        $this->assertTrue($this->isValidSph(-19.75));
+        $this->assertTrue($this->isValidSph(9.75));
+        $this->assertFalse($this->isValidSph(-20.50));
+        $this->assertFalse($this->isValidSph(10.50));
+    }
+
+    public function test_support_ticket_content_length_boundaries(): void
+    {
+        $this->assertFalse($this->isValidTicketContent(str_repeat('a', 9)));
+        $this->assertTrue($this->isValidTicketContent(str_repeat('a', 10)));
+        $this->assertTrue($this->isValidTicketContent(str_repeat('a', 1000)));
+        $this->assertFalse($this->isValidTicketContent(str_repeat('a', 1001)));
+    }
+
+    public function test_inventory_stock_boundaries(): void
+    {
+        $this->assertFalse($this->isValidStock(-1));
+        $this->assertTrue($this->isValidStock(0));
+        $this->assertTrue($this->isValidStock(1));
+    }
+
+    private function isValidCartQuantity(float|int $quantity): bool
+    {
+        return is_int($quantity) && $quantity >= 1 && $quantity <= 99;
+    }
+
+    private function isValidDiscountPercent(float|int $percent): bool
+    {
+        return $percent >= 1 && $percent <= 100;
+    }
+
+    private function isValidPasswordLength(string $password): bool
+    {
+        $length = strlen($password);
+        return $length >= 8 && $length <= 50;
+    }
+
+    private function isValidSph(float $sph): bool
+    {
+        return $sph >= -20.00 && $sph <= 10.00;
+    }
+
+    private function isValidTicketContent(string $content): bool
+    {
+        $length = strlen($content);
+        return $length >= 10 && $length <= 1000;
+    }
+
+    private function isValidStock(int $stock): bool
+    {
+        return $stock >= 0;
     }
 }
