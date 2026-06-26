@@ -427,18 +427,33 @@ async function main() {
         fields: {
           project: { key: process.env.PROJECT_KEY },
           summary: bug.summary,
-          description: adf([
-            "Hệ thống kiểm thử tự động phát hiện API bị lỗi.",
-            `Bộ kịch bản: ${bug.moduleName}`,
-            `Tên API: ${bug.apiName}`,
-            `Thông tin Request/Response: ${bug.details || "Không có"}`,
-            `Chi tiết các lỗi: - ${bug.errorMsg}`,
-            "---",
-            `Người kích hoạt build: ${process.env.ACTOR}`,
-            `Nhánh code: ${process.env.BRANCH}`,
-            `GitHub Actions Run #${process.env.RUN_NUMBER}: ${runUrl}`,
-            "Báo cáo HTML: tải trong mục Artifacts trên GitHub Actions."
-          ]),
+          description: {
+            version: 1, type: "doc",
+            content: [
+              { type: "heading", attrs: { level: 3 }, content: [{ type: "text", text: "📌 BÁO CÁO LỖI TỪ HỆ THỐNG CI/CD" }] },
+              { type: "paragraph", content: [{ type: "text", text: "Hệ thống kiểm thử tự động phát hiện API bị lỗi hoặc không đạt chuẩn chất lượng." }] },
+              { type: "bulletList", content: [
+                  { type: "listItem", content: [{ type: "paragraph", content: [{ type: "text", text: "Bộ kịch bản (Module): ", marks: [{ type: "strong" }] }, { type: "text", text: bug.moduleName }] }] },
+                  { type: "listItem", content: [{ type: "paragraph", content: [{ type: "text", text: "Tên API (Endpoint): ", marks: [{ type: "strong" }] }, { type: "text", text: bug.apiName }] }] }
+              ]},
+              { type: "paragraph", content: [{ type: "text", text: "❌ Dấu hiệu lỗi (Symptom):", marks: [{ type: "strong" }] }] },
+              { type: "codeBlock", attrs: { language: "text" }, content: [{ type: "text", text: bug.errorMsg }] },
+              { type: "paragraph", content: [{ type: "text", text: "🛠 Payload / Thông tin Request:", marks: [{ type: "strong" }] }] },
+              { type: "codeBlock", attrs: { language: "http" }, content: [{ type: "text", text: bug.details || "Không có" }] },
+              { type: "heading", attrs: { level: 3 }, content: [{ type: "text", text: "📊 ĐÁNH GIÁ MỨC ĐỘ ẢNH HƯỞNG" }] },
+              { type: "bulletList", content: [
+                  { type: "listItem", content: [{ type: "paragraph", content: [{ type: "text", text: "Mức độ nghiêm trọng (Severity): ", marks: [{ type: "strong" }] }, { type: "text", text: priorityName === "Highest" ? "Nghiêm trọng (Critical) - Ảnh hưởng luồng chính" : priorityName === "High" ? "Cao (Major) - Lỗi chức năng quan trọng" : "Trung bình (Minor)" }] }] },
+                  { type: "listItem", content: [{ type: "paragraph", content: [{ type: "text", text: "Tần số xuất hiện (Frequency): ", marks: [{ type: "strong" }] }, { type: "text", text: "Liên tục (100% reproducible trên CI/CD)" }] }] },
+                  { type: "listItem", content: [{ type: "paragraph", content: [{ type: "text", text: "Phân loại (Labels): ", marks: [{ type: "strong" }] }, { type: "text", text: `ci-cd, postman, api-${bug.bugKey}` }] }] },
+                  { type: "listItem", content: [{ type: "paragraph", content: [{ type: "text", text: "Reporter & Date: ", marks: [{ type: "strong" }] }, { type: "text", text: `Kích hoạt bởi ${process.env.ACTOR}` }] }] }
+              ]},
+              { type: "paragraph", content: [{ type: "text", text: "⚖️ QUYẾT ĐỊNH (Decision): ", marks: [{ type: "strong" }] }, { type: "text", text: "Yêu cầu Developer fix lỗi này ngay trong Sprint hiện tại. Trạng thái pipeline đang bị chặn (Failed).", marks: [{ type: "strong" }] }] },
+              { type: "paragraph", content: [
+                  { type: "text", text: "🔗 " },
+                  { type: "text", text: `Xem báo cáo chi tiết trên GitHub Actions (Run #${process.env.RUN_NUMBER} - Nhánh ${process.env.BRANCH})`, marks: [{ type: "link", attrs: { href: runUrl } }] }
+              ]}
+            ]
+          },
           issuetype: { name: "Bug" },
           priority:  { name: priorityName },
           labels: ["ci-cd", "postman", "auto-detected", `api-${bug.bugKey}`],
