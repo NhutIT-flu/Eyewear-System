@@ -149,7 +149,7 @@ jobs:
           --suppress-exit-code
 
     - name: Sync Jira Bugs With Test Results
-      if: always()
+      if: success() || failure()
       env:
         JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
         JIRA_USER_EMAIL: ${{ secrets.JIRA_GMAIL }}
@@ -164,7 +164,7 @@ jobs:
 
     - name: Upload Test Reports Artifacts
       uses: actions/upload-artifact@v4
-      if: always()
+      if: success() || failure()
       with:
         name: Complete-Test-Reports
         path: |
@@ -175,7 +175,7 @@ jobs:
           /tmp/php-server.log
 
     - name: Send Discord Notification
-      if: always()
+      if: success() || failure()
       env:
         DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         REPO_NAME: ${{ github.repository }}
