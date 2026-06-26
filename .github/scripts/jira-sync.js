@@ -144,7 +144,7 @@ async function main() {
     let startAt = 0;
     const maxResults = 100;
     while (true) {
-      const url = `${jiraBase}/rest/api/3/search?jql=${encodeURIComponent(jql)}&startAt=${startAt}&maxResults=${maxResults}&fields=summary,status,labels,issuetype,assignee`;
+      const url = `${jiraBase}/rest/api/3/search/jql?jql=${encodeURIComponent(jql)}&startAt=${startAt}&maxResults=${maxResults}&fields=summary,status,labels,issuetype,assignee`;
       const res = await fetchJson("GET", url);
       if (!res || res.errorMessages || res.errors) {
         console.log("❌ Jira search error:", JSON.stringify(res).slice(0, 500));
