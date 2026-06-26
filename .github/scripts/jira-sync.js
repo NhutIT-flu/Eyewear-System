@@ -21,6 +21,7 @@ const auth = Buffer
   .from(`${process.env.JIRA_USER_EMAIL}:${process.env.JIRA_API_TOKEN}`)
   .toString("base64");
 const jiraBase = process.env.JIRA_BASE_URL.replace(/\/$/, "");
+console.log(`📌 Starting Jira sync for project ${process.env.PROJECT_KEY} at ${jiraBase}`);
 
 const members = [
   "712020:ba3687e1-2a5e-4f18-8594-07315b414728",
@@ -44,7 +45,14 @@ async function fetchJson(method, url, body = null) {
     options.body = JSON.stringify(body);
   }
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    options.signal = controller.signal;
+    
+    console.log(`➡️  Fetching: ${method} ${url}`);
     const response = await fetch(url, options);
+    clearTimeout(timeoutId);
+    
     const text = await response.text();
     if (!text || text.trim() === "") return {};
     return JSON.parse(text);
@@ -246,8 +254,12 @@ async function main() {
 
   let cachedBranches = "";
   try {
-    cachedBranches = execSync("git ls-remote --heads origin 2>/dev/null", { encoding: "utf8" });
-  } catch (e) { }
+    console.log("⏳ Fetching git branches to verify active issues...");
+    cachedBranches = execSync("env GIT_TERMINAL_PROMPT=0 git ls-remote --heads origin 2>/dev/null", { encoding: "utf8", timeout: 10000 });
+    console.log("✅ Git branches fetched.");
+  } catch (e) { 
+    console.log("⚠️ Could not fetch git branches, skipping branch verification.");
+  }
 
   for (const [index, bug] of failures.entries()) {
     const existing = findExistingBug(bug);
