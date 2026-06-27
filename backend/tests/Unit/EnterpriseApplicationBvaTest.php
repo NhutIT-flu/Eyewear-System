@@ -299,4 +299,31 @@ class EnterpriseApplicationBvaTest extends TestCase
             $db->exec("DELETE FROM `order` WHERE id = {$orderId}");
         }
     }
+    // ==========================================
+    // 11. CATALOG SERVICE (PRICE BVA)
+    // ==========================================
+
+    public function test_catalog_price_below_boundary_throws_exception(): void
+    {
+        $service = new \App\Application\CatalogService();
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage("Invalid price boundaries.");
+
+        $service->createProduct([
+            'name' => 'BVA Test Product',
+            'base_price' => -1
+        ]);
+    }
+
+    public function test_catalog_price_above_boundary_throws_exception(): void
+    {
+        $service = new \App\Application\CatalogService();
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage("Invalid price boundaries.");
+
+        $service->createProduct([
+            'name' => 'BVA Test Product',
+            'base_price' => 100000001
+        ]);
+    }
 }
