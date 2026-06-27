@@ -10,6 +10,13 @@ class PaymentService
 {
     public function processPayment(int $orderId, string $method, float $amount, ?int $userId = null): array
     {
+        // 1. Xác định trạng thái thanh toán dựa trên phương thức (case-insensitive) - EP RULE
+        $methodLower = strtolower(trim($method));
+        $allowedMethods = ['cod', 'bank_transfer', 'card', 'e_wallet'];
+        if (!in_array($methodLower, $allowedMethods, true)) {
+            throw new \Exception('Unsupported payment method');
+        }
+
         $db = Database::getInstance();
 
         $order = Order::find($orderId);
@@ -21,12 +28,6 @@ class PaymentService
             throw new \Exception('Order does not belong to the authenticated user');
         }
 
-        // 1. Xác định trạng thái thanh toán dựa trên phương thức (case-insensitive)
-        $methodLower = strtolower(trim($method));
-        $allowedMethods = ['cod', 'bank_transfer', 'card', 'e_wallet'];
-        if (!in_array($methodLower, $allowedMethods, true)) {
-            throw new \Exception('Unsupported payment method');
-        }
 
         if ($amount <= 0) {
             $amount = (float) $order->total_amount;

@@ -85,8 +85,13 @@ class CartService
         }
 
         $variantId = $data['variant_id'];
-        $quantity = $data['quantity'] ?? 1;
+        $quantity = (int)($data['quantity'] ?? 1);
         $isPreorder = !empty($data['is_preorder']);
+
+        // [ENTERPRISE BVA RULE]: Cart quantity must be between 1 and 99
+        if ($quantity < 1 || $quantity > 99) {
+            throw new \Exception("Invalid quantity. Cart quantity must be between 1 and 99.");
+        }
 
         // Check stock availability (skip for pre-orders)
         $stmt = $this->db->prepare("SELECT quantity FROM inventory WHERE productvariant_id = ?");
@@ -143,6 +148,11 @@ class CartService
     public function updateQuantity(int $userId, int $cartItemId, int $quantity)
     {
         if ($quantity <= 0) return $this->removeItem($userId, $cartItemId);
+
+        // [ENTERPRISE BVA RULE]: Cart quantity must not exceed 99
+        if ($quantity > 99) {
+            throw new \Exception("Invalid quantity. Cart quantity cannot exceed 99.");
+        }
 
         // Check stock
         $stmt = $this->db->prepare("

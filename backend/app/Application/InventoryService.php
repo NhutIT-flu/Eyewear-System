@@ -171,6 +171,18 @@ class InventoryService
             throw new \InvalidArgumentException('Either quantity or delta is required at updates[' . $index . '].');
         }
 
+        // [ENTERPRISE BVA RULE]: Inventory stock quantity limit (Validate early)
+        $newQuantity = 0;
+        if ($hasQuantity) {
+            $newQuantity = (int) $payload['quantity'];
+            if ($newQuantity < 0) {
+                throw new \Exception("Invalid stock. Stock quantity cannot be less than 0.");
+            }
+        } else {
+            // Đối với delta, nếu truyền delta âm cực lớn, ta phải check ở đây.
+            // Nhưng currentQuantity cần đọc từ DB, nên ta sẽ check tổng sau khi lấy currentQuantity.
+        }
+
         $variantStmt = $db->prepare('SELECT id, product_id, sku, stock_quantity FROM productvariant WHERE id = ? FOR UPDATE');
         $variantStmt->execute([$variantId]);
         $variant = $variantStmt->fetch();
@@ -183,9 +195,13 @@ class InventoryService
         $inventory = $inventoryStmt->fetch();
 
         $currentQuantity = $inventory ? (int) $inventory['quantity'] : (int) $variant['stock_quantity'];
-        $newQuantity = $hasQuantity
-            ? max(0, (int) $payload['quantity'])
-            : max(0, $currentQuantity + (int) $payload['delta']);
+        
+        if (!$hasQuantity) {
+            $newQuantity = $currentQuantity + (int) $payload['delta'];
+            if ($newQuantity < 0) {
+                throw new \Exception("Invalid stock. Resulting stock quantity cannot be less than 0.");
+            }
+        }
 
         $reservedQuantity = $inventory ? (int) $inventory['reserved_quantity'] : 0;
         $newReorderLevel = array_key_exists('reorder_level', $payload)

@@ -253,13 +253,20 @@ class AdminService
 
         $required = ['code', 'title', 'discount_type', 'discount_value', 'starts_at', 'ends_at'];
         foreach ($required as $field) {
-            if (empty($data[$field])) {
+            if (!isset($data[$field]) || $data[$field] === '') {
                 throw new \Exception("Missing required field: $field");
             }
         }
 
         if (!in_array($data['discount_type'], ['percentage', 'fixed'], true)) {
             throw new \Exception('Invalid discount_type. Must be: percentage or fixed');
+        }
+
+        // [ENTERPRISE BVA RULE]: Voucher percentage discount
+        if ($data['discount_type'] === 'percentage') {
+            if ($data['discount_value'] < 1 || $data['discount_value'] > 100) {
+                throw new \Exception("Percentage discount must be between 1 and 100.");
+            }
         }
 
         $checkStmt = $db->prepare("SELECT id FROM promotion WHERE code = ?");

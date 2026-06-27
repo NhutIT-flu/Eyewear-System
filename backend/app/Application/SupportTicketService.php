@@ -66,15 +66,27 @@ class SupportTicketService
     /**
      * Khách hàng tạo ticket mới
      */
-    public function createTicket(int $userId, string $subject, string $message, ?int $orderId = null): array
+    public function createTicket(int $userId, string $subject, string $message, ?int $orderId = null, string $priority = 'normal'): array
     {
+        // [ENTERPRISE EP RULE]: Ticket priority
+        $allowedPriorities = ['low', 'normal', 'high'];
+        if (!in_array($priority, $allowedPriorities, true)) {
+            throw new \Exception("Unsupported ticket priority.");
+        }
+
+        // [ENTERPRISE BVA RULE]: Ticket message length must be between 10 and 1000
+        $msgLen = strlen($message);
+        if ($msgLen < 10 || $msgLen > 1000) {
+            throw new \Exception("Ticket message must be between 10 and 1000 characters.");
+        }
+
         $ticket = Ticket::create([
             'user_id' => $userId,
             'order_id' => $orderId,
             'subject' => $subject,
             'message' => $message,
             'status' => 'open',
-            'priority' => 'medium'
+            'priority' => $priority
         ]);
 
         return $ticket->toArray();

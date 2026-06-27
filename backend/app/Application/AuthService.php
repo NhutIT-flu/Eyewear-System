@@ -11,6 +11,17 @@ class AuthService
 
     public function register(array $data)
     {
+        // [ENTERPRISE EP RULE]: Email format
+        if (!filter_var($data['email'] ?? '', FILTER_VALIDATE_EMAIL)) {
+            throw new \Exception("Invalid email format.");
+        }
+
+        // [ENTERPRISE BVA RULE]: Password length
+        $passwordLen = strlen($data['password'] ?? '');
+        if ($passwordLen < 8 || $passwordLen > 50) {
+            throw new \Exception("Invalid password. Must be between 8 and 50 characters.");
+        }
+
         $db = Database::getInstance();
 
         // 1. Check Role 'CUSTOMER'

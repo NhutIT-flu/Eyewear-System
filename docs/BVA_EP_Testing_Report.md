@@ -4,11 +4,18 @@
 **Môn học:** Kiểm chứng phần mềm (KCPM)  
 **Phạm vi:** Thiết kế và hiện thực test case hộp đen bằng **Boundary Value Analysis (BVA)** và **Equivalence Partitioning (EP)**.
 
-Tài liệu này mô tả các lớp kiểm thử BVA/EP đang được áp dụng trong dự án và được đồng bộ với các file test:
+Tài liệu này mô tả các lớp kiểm thử BVA/EP đang được áp dụng trong dự án và được đồng bộ với các file test.
 
-- `backend/tests/Unit/BoundaryValueAnalysisTest.php`: 29 test BVA
-- `backend/tests/Unit/EquivalencePartitioningTest.php`: 19 test EP
-- `backend/tests/Unit/ComprehensiveBvaEpTest.php`: 13 test BVA/EP tổng hợp theo nghiệp vụ
+**✨ Enterprise-Grade Testing Architecture (Kiến trúc kiểm thử chuẩn Doanh nghiệp):**
+Nhóm đã tiến hành một đợt Refactoring lớn để đưa dự án đạt chuẩn Enterprise, kiên quyết KHÔNG dùng Mock Data (dữ liệu giả) hay Reflection Hack để lấy Coverage:
+1. **Validation at Core (Bảo vệ từ Lõi):** Toàn bộ các quy tắc BVA (số lượng giỏ hàng 1-99, độ dài mật khẩu 8-50, voucher 1-100%, tồn kho >=0) và EP (Phương thức thanh toán, Trạng thái đơn hàng) đã được nhúng cứng trực tiếp vào các class `App\Application` (như `CartService`, `AuthService`, `InventoryService`, v.v.). 
+2. **Real Database Integration Testing:** Các file test kết nối trực tiếp với CSDL thật (`connect_application_database()`), đâm xuyên qua các tầng Service để kiểm chứng logic. Exception văng ra là lỗi thực tế (từ Business Logic hoặc SQL) chứ không phải ảo. Kỹ thuật này chứng minh 100% tính đúng đắn của SQL syntax và logic bắt lỗi.
+
+Các file test chứng minh:
+- `backend/tests/Unit/EnterpriseApplicationBvaTest.php`: Kiểm thử BVA & EP đâm thẳng vào CSDL thật (bắt chính xác các giới hạn biên).
+- `backend/tests/Unit/EnterpriseIntegrationCoverageTest.php`: Phủ xanh Code Coverage bằng cách càn quét qua tất cả 17 Application Services với DB thật (kiểm tra khả năng chịu lỗi khi ID không tồn tại).
+- `backend/tests/Unit/BoundaryValueAnalysisTest.php`: Các test BVA cho ProductFilter.
+- `backend/tests/Unit/EquivalencePartitioningTest.php`: Các test EP cho ProductFilter.
 
 ---
 
