@@ -473,6 +473,11 @@ class CatalogService
 
 	public function createProduct(array $data): array
 	{
+		// [ENTERPRISE BVA RULE]: Price validation
+		if (isset($data['base_price']) && ((float)$data['base_price'] < 0 || (float)$data['base_price'] > 100000000)) {
+			throw new \Exception("Invalid price boundaries.");
+		}
+		
 		$db = Database::getInstance();
 		$slug = $data['slug'] ?? $this->generateSlug($data['name']);
 		

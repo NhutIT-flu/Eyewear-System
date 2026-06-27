@@ -147,6 +147,10 @@ class CartService
 
     public function updateQuantity(int $userId, int $cartItemId, int $quantity)
     {
+        // [ENTERPRISE BVA RULE]: Max quantity per item is 99
+        if ($quantity > 99) {
+            throw new \Exception("Cart quantity cannot exceed 99 items per variant.");
+        }
         if ($quantity <= 0) return $this->removeItem($userId, $cartItemId);
 
         // [ENTERPRISE BVA RULE]: Cart quantity must not exceed 99
