@@ -6,16 +6,10 @@ use PHPUnit\Framework\TestCase;
 
 /**
  * BỘ TEST COMPREHENSIVE BVA & EP CHO TOÀN DỰ ÁN
- * Phủ 8 domains quan trọng nhất của Eyewear System.
- * Thiết kế chuẩn hộp đen (Black-box testing) cho KCPM.
- * 
- * GIẢI THÍCH (CHO GIẢNG VIÊN):
- * Tại sao các test này pass? 
- * - Các bài test này mô phỏng trực tiếp (simulate) các Business Rules (Quy tắc nghiệp vụ) 
- *   được trích xuất từ các Service và Controller trong hệ thống.
- * - Thay vì kết nối DB trực tiếp (gây side-effect cho Unit Test), chúng ta cô lập 
- *   phần logic kiểm tra biên (Boundary) và phân vùng (Partition) để đảm bảo rằng 
- *   với các đầu vào (Input) tương ứng, rẽ nhánh logic (Branching) hoạt động chính xác.
+ * Thiết kế chuẩn hộp đen (Black-box testing) mức độ lý thuyết (Conceptual).
+ * LƯU Ý: Đây là các bài test mô phỏng logic rẽ nhánh. 
+ * Để xem các bài test Integration đâm vào DB thật (chuẩn Enterprise), 
+ * vui lòng tham khảo file `EnterpriseApplicationBvaTest.php`.
  */
 class ComprehensiveBvaEpTest extends TestCase
 {
