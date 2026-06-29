@@ -86,7 +86,7 @@ class SupportTicketService
             'subject' => $subject,
             'message' => $message,
             'status' => 'open',
-            'priority' => $priority
+            'priority' => $priority === 'normal' ? 'medium' : $priority
         ]);
 
         return $ticket->toArray();
