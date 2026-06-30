@@ -153,7 +153,7 @@ pipeline {
                                             echo "Running incremental PHP syntax check..."
                                             if [ -f changed_files.txt ]; then
                                                 while IFS= read -r file; do
-                                                    if [[ "$file" =~ \.php$ ]] && [[ "$file" =~ ^backend/ ]] && [[ ! "$file" =~ vendor/ ]]; then
+                                                    if [[ "$file" =~ \\.php$ ]] && [[ "$file" =~ ^backend/ ]] && [[ ! "$file" =~ vendor/ ]]; then
                                                         if [ -f "$file" ]; then
                                                             echo "Checking $file"
                                                             if ! php -l "$file" > /dev/null 2>&1; then
@@ -189,7 +189,7 @@ pipeline {
                                             echo Running incremental PHP syntax check...
                                             if exist changed_files.txt (
                                                 for /F "tokens=*" %%f in (changed_files.txt) do (
-                                                    echo %%f | findstr /i /r "\.php$" >nul
+                                                    echo %%f | findstr /i /r "\\.php$" >nul
                                                     if not errorlevel 1 (
                                                         echo %%f | findstr /i /r "^backend/" >nul
                                                         if not errorlevel 1 (
