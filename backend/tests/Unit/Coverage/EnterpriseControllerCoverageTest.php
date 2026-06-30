@@ -62,7 +62,9 @@ class EnterpriseControllerCoverageTest extends TestCase
     public function test_admin_controller()
     {
         $db = \Core\Database::getInstance();
-        $db->exec("INSERT INTO `user` (full_name, email, password_hash, status) VALUES ('Temp Controller Test', 'temp_ctrl_test@example.com', 'hash', 'active')");
+        $tempHash = password_hash('TempPass123!', PASSWORD_DEFAULT);
+        $tempEmail = 'temp_ctrl_' . uniqid() . '@example.com';
+        $db->exec("INSERT INTO `user` (full_name, email, password_hash, status) VALUES ('Temp Controller Test', '$tempEmail', '$tempHash', 'active')");
         $tempUserId = (int)$db->lastInsertId();
 
         $controller = new \App\Http\Controllers\Api\V1\AdminController(new \App\Application\AdminService());
@@ -88,8 +90,9 @@ class EnterpriseControllerCoverageTest extends TestCase
         $db->exec("DELETE FROM user_roles WHERE user_id = $tempUserId");
         $db->exec("DELETE FROM `user` WHERE id = $tempUserId");
         
-        // Restore/Ensure admin user (ID 1) is active and has ADMIN role
-        $db->exec("UPDATE `user` SET status = 'active' WHERE id = 1");
+        // Restore/Ensure admin user (ID 1) is active, has ADMIN role and password '123'
+        $adminHash = password_hash('123', PASSWORD_DEFAULT);
+        $db->exec("UPDATE `user` SET status = 'active', password_hash = '$adminHash' WHERE id = 1");
         $roleAdmin = $db->query("SELECT id FROM role WHERE name = 'ADMIN'")->fetchColumn();
         if ($roleAdmin) {
             $db->exec("INSERT IGNORE INTO user_roles (user_id, role_id) VALUES (1, $roleAdmin)");
