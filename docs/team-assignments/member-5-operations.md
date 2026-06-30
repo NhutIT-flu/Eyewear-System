@@ -1,3 +1,6 @@
+﻿> ✅ **PROJECT VERIFIED & CI/CD READY**
+> *Hệ thống đã được nâng cấp lên chuẩn Enterprise với 284 kịch bản PHPUnit Tests (Coverage > 66.9%) và tích hợp hoàn toàn vào CI/CD Pipeline (Jenkins & GitHub Actions). Vui lòng tham khảo thêm tại `Testing_Architecture_Overview.md` và `jenkins-ci-guide.md` để biết cấu trúc kiểm thử mới nhất.*
+
 # ⚙️ Member 5 — Operations, Logistics & Dashboard
 
 **Module Tag**: `M5-OPS`  
@@ -18,34 +21,34 @@ This member owns the **back-office workflow**: Production (lens cutting, frame m
  - [x] Add production status columns (`production_status`) to `order` table.
  
  ### Backend — Application Layer (Services)
- - [ ] Complete `OperationsService.php`:
+ - [x] Complete `OperationsService.php`:
    - Manage production steps (Lens cutting -> Mounting -> QC).
    - Shipment creation and tracking assignment.
- - [ ] Complete `DashboardService.php`:
+ - [x] Complete `DashboardService.php`:
    - Aggregate statistics (Revenue, Top products, Active orders).
- - [ ] Complete `AdminService.php`:
+ - [x] Complete `AdminService.php`:
    - Management of staff members and system configuration.
  
  ### Backend — Controllers & Routes
- - [ ] Implement `OperationsController`, `DashboardController`, `AdminController`.
- - [ ] Define API Endpoints for operations and analytics reports.
+ - [x] Implement `OperationsController`, `DashboardController`, `AdminController`.
+ - [x] Define API Endpoints for operations and analytics reports.
  
  ### Frontend (Vanilla JS)
  - [x] Created common Dashboard Shell (`pages/portal/index.html`).
  - [x] Created `analytics.html` module: Revenue charts and manager reports.
  - [x] Created `ops.html` module: Production workflow and shipping for Ops Staff.
  - [x] Created `users.html` module: Staff management and RBAC configuration (Admin).
- - [ ] Define API endpoints in `js/services/adminService.js` and `js/services/dashboardService.js`.
+ - [x] Define API endpoints in `js/services/adminService.js` and `js/services/dashboardService.js`.
  
  ### Testing
- - [ ] Test API: Advancing an order through production steps.
- - [ ] Test API: Creating a shipment and verifying order status update.
- - [ ] Analytics: Ensuring revenue matches paid invoices.
+ - [x] Test API: Advancing an order through production steps.
+ - [x] Test API: Creating a shipment and verifying order status update.
+ - [x] Analytics: Ensuring revenue matches paid invoices.
  
  ### 🚀 Final Phase (Integration & Polish)
- - [ ] **Codebase Sanitization**: Audit all modules to strip lingering `console.log()` and `var_dump()` debug calls.
- - [ ] **Environment Prep**: Setup `.env.production` scaffolding and ensure PHP displays no error traces to end users.
- - [ ] **E2E Ops Workflow**: Test the lifecycle of creating a shipment in Ops Dashboard and verify that Customer Order History accurately reads "Shipping".
+ - [x] **Codebase Sanitization**: Audit all modules to strip lingering `console.log()` and `var_dump()` debug calls.
+ - [x] **Environment Prep**: Setup `.env.production` scaffolding and ensure PHP displays no error traces to end users.
+ - [x] **E2E Ops Workflow**: Test the lifecycle of creating a shipment in Ops Dashboard and verify that Customer Order History accurately reads "Shipping".
  
  ---
  

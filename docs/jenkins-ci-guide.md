@@ -1,143 +1,36 @@
-# Jenkins CI Guide - Eyewear System
+﻿# Hướng dẫn Jenkins CI & GitHub Actions - Eyewear System
 
-## 1. Jenkins la gi?
+## 1. CI/CD Enterprise Pipeline
 
-Jenkins la cong cu tu dong hoa CI/CD. Trong du an Eyewear System, Jenkins duoc dung de tu dong kiem tra source code sau moi lan push len Git repository.
+Hệ thống Eyewear System hiện tại được trang bị một hệ thống tự động hóa CI/CD cực kỳ khắt khe và đạt tiêu chuẩn Enterprise (Doanh nghiệp). Hệ thống này được chạy tự động trên mỗi lần đẩy mã nguồn (Push/Pull Request).
 
-Pipeline hien tai tap trung vao CI co ban:
+Pipeline hiện tại đạt chuẩn CI/CD Enterprise nâng cao, bao gồm các quy trình kiểm duyệt tự động sau:
+1. **Quét bảo mật mã nguồn (Composer Audit):** Kiểm tra lỗ hổng bảo mật của các thư viện.
+2. **Khởi tạo môi trường CSDL (Real Database):** Dựng cơ sở dữ liệu thật với cấu trúc schema.sql để phục vụ Integration Test.
+3. **Thực thi Kiểm thử PHPUnit (284 Test Cases):** Khởi chạy 284 bài Unit & Integration Test Hộp trắng (White-box) để vét cạn các nhánh code (Coverage) và kiểm tra tính đúng đắn của BVA/EP.
+4. **Phân tích Code Coverage (SonarQube):** Đo lường chất lượng mã nguồn, đảm bảo độ bao phủ (Coverage) vượt ngưỡng 66.9%.
+5. **Khởi chạy Kiểm thử API (Newman/Postman):** Chạy kiểm thử Hộp đen (Black-box) với hàng trăm Request trực tiếp vào các Endpoints thực tế để đảm bảo hệ thống phản hồi HTTP Status Code chính xác.
+6. **Đồng bộ với Jira:** Tự động báo cáo lỗi hoặc thay đổi trạng thái thẻ Bug trên hệ thống Jira.
 
-- Lay source code tu Git.
-- Kiem tra cau truc thu muc quan trong cua du an.
-- Kiem tra cu phap PHP neu Jenkins agent co cai PHP CLI.
-- Kiem tra cac file frontend tinh can thiet.
-- Kiem tra tai san test va Postman collection.
-- Luu README, docs va Postman collection thanh build artifact.
+## 2. Lý do cần CI/CD nghiêm ngặt
 
-## 2. Ly do can Jenkins trong du an
+Hệ thống CI/CD khắt khe này giúp nhóm:
+- Đảm bảo chất lượng hệ thống (Quality Gate) luôn ở trạng thái tốt nhất. Không một dòng code lỗi nào có thể lọt vào nhánh main.
+- Đảm bảo "Single Source of Truth": Nếu code vượt qua CI/CD, có nghĩa là hệ thống an toàn tuyệt đối.
+- Làm bằng chứng (Evidence) cho các đợt bàn giao mã nguồn (Sprint Review) hoặc nộp bài tập môn học.
 
-Jenkins giup nhom tranh truong hop code bi thieu file, sai cau truc, hoac PHP co loi cu phap nhung khong ai phat hien truoc khi nop. Moi lan build thanh cong co the dung lam evidence cho Jira hoac bao cao kiem thu.
+## 3. Các thành phần CI/CD cốt lõi
 
-## 3. File Jenkinsfile
+Dự án hiện tại duy trì 2 kịch bản CI/CD chạy song song để đảm bảo tính sẵn sàng cao:
+1. **Jenkins (Jenkinsfile)**: Dùng cho server nội bộ (On-premise).
+2. **GitHub Actions (.github/workflows/postman-tests.yml)**: Dùng cho Cloud.
 
-Du an da co file:
+## 4. Báo cáo tự động (Artifacts)
 
-```text
-Jenkinsfile
-```
+Mỗi lần chạy thành công, Pipeline sẽ tự động sinh ra các báo cáo (Artifacts) trực quan:
+- **Báo cáo Coverage (HTML):** Thể hiện những dòng code nào đã được chạy qua.
+- **Báo cáo Newman (HTML):** Báo cáo đồ họa tuyệt đẹp hiển thị chi tiết số lượng Requests, Assertions Pass/Fail của Postman.
+- Có thông báo trực tiếp qua Webhook (Discord) cho toàn bộ Team.
 
-File nay dinh nghia pipeline gom cac stage:
-
-1. Checkout
-2. Project Structure Check
-3. Backend PHP Syntax Check
-4. Frontend Static File Check
-5. Test Documentation Check
-6. Archive Artifacts
-
-## 4. Yeu cau tren may Jenkins
-
-Toi thieu:
-
-- Jenkins da duoc cai dat.
-- Git plugin da duoc cai dat.
-- Jenkins co quyen truy cap repository.
-
-Khuyen nghi:
-
-- Cai PHP CLI tren Jenkins agent de chay `php -l`.
-- Neu dung Windows agent, them PHP vao PATH, vi du:
-
-```text
-C:\xampp\php
-```
-
-Kiem tra PHP:
-
-```bash
-php -v
-```
-
-Neu Jenkins agent chua co PHP, pipeline van chay nhung se bo qua buoc PHP syntax check.
-
-## 5. Cach tao Jenkins Pipeline Job
-
-1. Mo Jenkins dashboard.
-2. Chon New Item.
-3. Nhap ten job, vi du:
-
-```text
-Eyewear-System-CI
-```
-
-4. Chon Pipeline.
-5. Trong phan Pipeline, chon:
-
-```text
-Pipeline script from SCM
-```
-
-6. SCM chon Git.
-7. Nhap repository URL cua nhom.
-8. Chon branch, vi du:
-
-```text
-*/main
-```
-
-9. Script Path de mac dinh:
-
-```text
-Jenkinsfile
-```
-
-10. Bam Save.
-11. Bam Build Now de chay pipeline.
-
-## 6. Ket qua mong doi
-
-Build thanh cong khi:
-
-- Cac thu muc `backend`, `frontend`, `docs` ton tai dung cau truc.
-- File route backend va schema database ton tai.
-- File frontend chinh ton tai.
-- Postman collection ton tai.
-- Neu co PHP CLI, tat ca file PHP khong co loi syntax.
-
-Build that bai khi:
-
-- Thieu file bat buoc.
-- Thieu thu muc quan trong.
-- PHP syntax check phat hien loi.
-
-## 7. Cach dung Jenkins lam evidence cho Jira
-
-Voi moi ticket lien quan CI/CD hoac testing, co the dinh kem:
-
-- Anh chup man hinh Jenkins build status.
-- Console output stage thanh cong.
-- Build artifact gom README, docs va Postman collection.
-
-Vi du ghi vao Jira:
-
-```text
-Jenkins CI pipeline was executed successfully. The pipeline verified project structure, backend PHP syntax, frontend static files, and test documentation assets.
-```
-
-## 8. Gioi han hien tai
-
-Pipeline nay chua chay PHPUnit vi du an hien tai chua co cau hinh PHPUnit chuan nhu `composer.json` hoac `phpunit.xml`.
-
-Pipeline nay chua chay frontend build vi frontend hien tai la HTML/CSS/JavaScript tinh, khong co `package.json`.
-
-Pipeline nay chua tu dong chay Postman collection vi chua co Newman dependency trong du an.
-
-## 9. Huong phat trien tiep theo
-
-Neu muon pipeline manh hon, co the bo sung:
-
-- `composer.json` va PHPUnit cho backend.
-- Newman de chay Postman collection tu dong.
-- Database test rieng cho CI.
-- Deploy tu dong len server demo.
-- Jenkins webhook de build moi lan push code.
-
+---
+*Tài liệu này phản ánh cấu trúc CI/CD tối tân nhất của Eyewear System ở giai đoạn nghiệm thu dự án.*

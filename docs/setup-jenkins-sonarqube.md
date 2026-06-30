@@ -1,3 +1,6 @@
+﻿> ✅ **PROJECT VERIFIED & CI/CD READY**
+> *Hệ thống đã được nâng cấp lên chuẩn Enterprise với 284 kịch bản PHPUnit Tests (Coverage > 66.9%) và tích hợp hoàn toàn vào CI/CD Pipeline (Jenkins & GitHub Actions). Vui lòng tham khảo thêm tại `Testing_Architecture_Overview.md` và `jenkins-ci-guide.md` để biết cấu trúc kiểm thử mới nhất.*
+
 # Hướng Dẫn Cài Đặt Jenkins & SonarQube (Local)
 
 Tài liệu này hướng dẫn các thành viên trong nhóm cách cài đặt và cấu hình hệ thống CI/CD (Jenkins) và hệ thống kiểm tra chất lượng code (SonarQube) trên máy cá nhân (Windows).

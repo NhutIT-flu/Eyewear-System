@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Unit;
+namespace Tests\Unit\Core;
 
 use PHPUnit\Framework\TestCase;
 use App\Http\Middleware\CorsMiddleware;

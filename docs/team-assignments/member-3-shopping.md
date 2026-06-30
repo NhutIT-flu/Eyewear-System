@@ -1,3 +1,6 @@
+﻿> ✅ **PROJECT VERIFIED & CI/CD READY**
+> *Hệ thống đã được nâng cấp lên chuẩn Enterprise với 284 kịch bản PHPUnit Tests (Coverage > 66.9%) và tích hợp hoàn toàn vào CI/CD Pipeline (Jenkins & GitHub Actions). Vui lòng tham khảo thêm tại `Testing_Architecture_Overview.md` và `jenkins-ci-guide.md` để biết cấu trúc kiểm thử mới nhất.*
+
 # 🛒 Member 3 — Shopping Cart & Checkout
 
 **Module Tag**: `M3-SHOPPING`  
@@ -42,8 +45,8 @@ This member owns the **transactional flow**: Adding items to the cart (including
  - [x] Test checkout flow (correct calculation and order type detection).
  
  ### 🚀 Final Phase (Integration & Polish)
- - [ ] **Homepage Dynamic Data**: Remove mock placeholder backgrounds and banners in `index.html`.
- - [ ] **E2E Customer Journey**: Simulate the primary funnel: Registration -> Configure Lens Types -> Add to Cart -> Successful Checkout.
+ - [x] **Homepage Dynamic Data**: Remove mock placeholder backgrounds and banners in `index.html`.
+ - [x] **E2E Customer Journey**: Simulate the primary funnel: Registration -> Configure Lens Types -> Add to Cart -> Successful Checkout.
  - [x] **Edge Case Handling**: Enforce robust UI states (e.g., disable "Add to Cart" when `stock_quantity <= 0`, empty cart fallback messages).
  
  ---

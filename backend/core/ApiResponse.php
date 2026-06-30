@@ -58,7 +58,8 @@ class ApiResponse
     public static function validationError(string $message, array $errors = []): array
     {
         http_response_code(422);
-        error_log('API_RESPONSE_ERROR (422) [' . $_SERVER['REQUEST_URI'] . ']: ' . $message);
+        $uri = $_SERVER['REQUEST_URI'] ?? 'CLI';
+        error_log('API_RESPONSE_ERROR (422) [' . $uri . ']: ' . $message);
         $response = ['success' => false, 'message' => $message];
         if (!empty($errors)) {
             $response['errors'] = $errors;
@@ -99,7 +100,8 @@ class ApiResponse
     public static function error(string $message, int $statusCode = 400): array
     {
         http_response_code($statusCode);
-        error_log('API_RESPONSE_ERROR (400) [' . $_SERVER['REQUEST_URI'] . ']: ' . $message);
+        $uri = $_SERVER['REQUEST_URI'] ?? 'CLI';
+        error_log('API_RESPONSE_ERROR (400) [' . $uri . ']: ' . $message);
         return ['success' => false, 'message' => $message];
     }
 

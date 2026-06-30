@@ -47,6 +47,9 @@ abstract class BaseController
     protected function getJsonInput(): array
     {
         $input = json_decode(file_get_contents('php://input'), true);
+        if (empty($input) && !empty($_POST)) {
+            return $_POST;
+        }
         return is_array($input) ? $input : [];
     }
 

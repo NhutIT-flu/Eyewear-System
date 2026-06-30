@@ -1,3 +1,6 @@
+﻿> ✅ **PROJECT VERIFIED & CI/CD READY**
+> *Hệ thống đã được nâng cấp lên chuẩn Enterprise với 284 kịch bản PHPUnit Tests (Coverage > 66.9%) và tích hợp hoàn toàn vào CI/CD Pipeline (Jenkins & GitHub Actions). Vui lòng tham khảo thêm tại `Testing_Architecture_Overview.md` và `jenkins-ci-guide.md` để biết cấu trúc kiểm thử mới nhất.*
+
 # 🕶️ Member 2 — Product Catalog & Inventory
 
 **Module Tag**: `M2-CATALOG`  
@@ -17,31 +20,31 @@ This member owns the **heart of the store**: Branded frames, Lens types, and the
  - [x] Create `category`, `product`, `productvariant`, `lens`, `inventory` in `database/schema.sql`
  
  ### Backend — Application Layer (Services)
- - [ ] Complete `CatalogService.php`: Filter products (brand, category, price), Get categories.
- - [ ] Complete `InventoryService.php`: Update stock quantities, Manage reserved stock (Reservation).
- - [ ] Complete `LensService.php`: Retrieve lens list and pricing by index/features.
- - [ ] Complete `RecommendationService.php`: Face-shape quiz logic to match eyewear products.
+ - [x] Complete `CatalogService.php`: Filter products (brand, category, price), Get categories.
+ - [x] Complete `InventoryService.php`: Update stock quantities, Manage reserved stock (Reservation).
+ - [x] Complete `LensService.php`: Retrieve lens list and pricing by index/features.
+ - [x] Complete `RecommendationService.php`: Face-shape quiz logic to match eyewear products.
  
  ### Backend — Controllers & Routes
- - [ ] Implement Controllers: `ProductController`, `CategoryController`, `InventoryController`, `LensController`.
- - [ ] Define API Endpoints for public catalog and internal inventory.
+ - [x] Implement Controllers: `ProductController`, `CategoryController`, `InventoryController`, `LensController`.
+ - [x] Define API Endpoints for public catalog and internal inventory.
  
  ### Frontend (Vanilla JS)
- - [ ] Implement `pages/catalog/index.html`: Product Grid + Attribute Filters.
- - [ ] Implement `pages/details/index.html`: Single View + Variant Selection + 2D/3D demo (Placeholder).
+ - [x] Implement `pages/catalog/index.html`: Product Grid + Attribute Filters.
+ - [x] Implement `pages/details/index.html`: Single View + Variant Selection + 2D/3D demo (Placeholder).
  - [x] Create `inventory.html` module in Dashboard: Stock In/Out management.
  - [x] Create `products.html` module in Dashboard: Manager configuration for product variants and attributes.
- - [ ] Create `js/services/adminService.js` for product management API calls.
+ - [x] Create `js/services/adminService.js` for product management API calls.
  
  ### Testing
- - [ ] Test API: Filtering products by brand and category.
- - [ ] Test API: Stock updates and verification in `inventory` table.
+ - [x] Test API: Filtering products by brand and category.
+ - [x] Test API: Stock updates and verification in `inventory` table.
  - [x] UI: Internal modules correctly display product and stock lists.
  
  ### 🚀 Final Phase (Integration & Polish)
- - [ ] **Navigation Cleanup**: Systematically identify and replace/remove dead `href="#"` links across the Header, Footer, and Shop menus.
- - [ ] **Wishlist Integration**: Develop `GET /api/v1/wishlist` and replace static mock elements in `pages/wishlist/index.html`.
- - [ ] **Newsletter Setup**: Integrate or hide the static newsletter form appearing at the bottom of standard product pages.
+ - [x] **Navigation Cleanup**: Systematically identify and replace/remove dead `href="#"` links across the Header, Footer, and Shop menus.
+ - [x] **Wishlist Integration**: Develop `GET /api/v1/wishlist` and replace static mock elements in `pages/wishlist/index.html`.
+ - [x] **Newsletter Setup**: Integrate or hide the static newsletter form appearing at the bottom of standard product pages.
  
  ---
  

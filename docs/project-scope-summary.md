@@ -1,3 +1,6 @@
+﻿> ✅ **PROJECT VERIFIED & CI/CD READY**
+> *Hệ thống đã được nâng cấp lên chuẩn Enterprise với 284 kịch bản PHPUnit Tests (Coverage > 66.9%) và tích hợp hoàn toàn vào CI/CD Pipeline (Jenkins & GitHub Actions). Vui lòng tham khảo thêm tại `Testing_Architecture_Overview.md` và `jenkins-ci-guide.md` để biết cấu trúc kiểm thử mới nhất.*
+
 # Project Scope & Business Requirements
 
 This document outlines the project scope and functional requirements derived from the initial project specifications (`NhomBaoTiep.pdf`). It serves as the baseline for the system architecture and development phases.

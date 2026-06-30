@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Unit;
+namespace Tests\Unit\Coverage;
 
 use PHPUnit\Framework\TestCase;
 
@@ -16,7 +16,7 @@ class EnterpriseModelCoverageTest extends TestCase
         parent::setUp();
         
         if (!defined('APP_ROOT')) {
-            define('APP_ROOT', dirname(__DIR__, 2));
+            define('APP_ROOT', dirname(__DIR__, 3));
         }
         
         require_once APP_ROOT . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'Infrastructure' . DIRECTORY_SEPARATOR . 'env.php';
