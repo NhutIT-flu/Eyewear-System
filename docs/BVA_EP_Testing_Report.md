@@ -278,7 +278,8 @@ Các file test chứng minh:
 | `EnterpriseRealPaymentTest.php` | 4 | Kiểm thử logic cổng thanh toán nâng cao. |
 | `EnterpriseRealProfileTest.php` | 2 | Kiểm thử quản lý hồ sơ và cập nhật thông tin cá nhân. |
 | `EnterpriseRealSalesTest.php` | 5 | Kiểm thử SalesVerificationService (duyệt đơn, khiếu nại, update prescription). |
-| **Tổng Test Tích Hợp (Real DB)** | **91** | **100% test chạy trên Real Database, bắt chặt BVA/EP.** |
+| `ExtendedBvaTest.php` | 50 | Mở rộng BVA cho Prescription (CYL/Axis/PD/SPH_OS), Auth changePassword, Profile name, Catalog pagination, Voucher EP, Order Workflow mở rộng, Payment EP. |
+| **Tổng Test Tích Hợp (Real DB)** | **141** | **100% test chạy trên Real Database, bắt chặt BVA/EP.** |
 
 ### 9.2. Kịch bản Tăng Độ Phủ & Luồng Controller (Deep Coverage)
 | File test | Nội dung chính |
