@@ -1,5 +1,5 @@
-﻿> ✅ **PROJECT VERIFIED & CI/CD READY**
-> *Hệ thống đã được nâng cấp lên chuẩn Enterprise với 284 kịch bản PHPUnit Tests (Coverage > 66.9%) và tích hợp hoàn toàn vào CI/CD Pipeline (Jenkins & GitHub Actions). Vui lòng tham khảo thêm tại `Testing_Architecture_Overview.md` và `jenkins-ci-guide.md` để biết cấu trúc kiểm thử mới nhất.*
+> ✅ **PROJECT VERIFIED & CI/CD READY**
+> *Hệ thống đã được nâng cấp lên chuẩn Enterprise với 284 kịch bản PHPUnit Tests (Coverage 63.53%) và tích hợp hoàn toàn vào CI/CD Pipeline (Jenkins & GitHub Actions). Tích hợp AIOps tự động quản lý thẻ qua OpenAI. Vui lòng tham khảo thêm tại `BVA_EP_Testing_Report.md` và `jenkins-ci-guide.md` để biết cấu trúc kiểm thử mới nhất.*
 
 # Checklist Trien Khai Kiem Chung Chuyen Nghiep - Eyewear System
 
@@ -511,34 +511,18 @@ git push origin feature/ES-11-login-api
 2. Neu pass, copy link build.
 3. Neu fail, sua loi va push lai.
 
-## 8.7 Cap nhat Jira
+## 8.7 Cap nhat Jira (Da duoc tu dong hoa bang AIOps)
 
-Comment mau:
+Trong phien ban Enterprise, buoc nay **khong con lam thu cong**.
+Sau khi Jenkins hoac GitHub Actions pass, script `jira-sync.js` se:
+1. Su dung **OpenAI (gpt-4o-mini)** doc log cua Postman de danh gia loi (neu co) va cham diem Story Point.
+2. Tu dong comment vao ticket kem theo Evidence.
+3. Tu dong chuyen trang thai ticket sang `Done` neu 100% Pass.
 
-```text
-Verification completed.
-
-Branch: feature/ES-11-login-api
-Commit: <commit-hash>
-Jenkins: Passed
-Postman:
-- Login Success: Passed
-- Wrong Password: Passed
-- Missing Email: Passed
-
-Evidence: screenshots attached.
-```
-
-Sau do chuyen ticket sang:
+Hanh dong thu cong chi xay ra khi Bot bao loi, Reviewer/Dev can vao check lai:
 
 ```text
-In Review
-```
-
-Neu reviewer dong y thi chuyen:
-
-```text
-Done
+In Review -> Neu dong y -> Done
 ```
 
 ## 9. Quy tac chuyen nghiep khi kiem chung
@@ -638,6 +622,6 @@ Truoc khi nop hoac demo:
 Co the noi trong demo:
 
 ```text
-Nhom em su dung Jira de quan ly yeu cau va test case, Git de quan ly source code, Jenkins de tu dong kiem tra cau truc va syntax backend, Postman de kiem thu REST API, SonarQube/SonarLint de danh gia chat luong code, va CodeceptJS cho kiem thu UI/E2E neu can. Moi ticket chi duoc chuyen Done khi co commit, Jenkins pass va evidence tu Postman hoac cong cu test tuong ung.
+Nhom em su dung Jira de quan ly yeu cau va test case, Git de quan ly source code, Jenkins/GitHub Actions de tu dong kiem tra cau truc va syntax backend. Chung em ket hop Postman de kiem thu REST API, SonarQube de danh gia chat luong code, va CodeceptJS cho kiem thu E2E tren giao dien. Dac biet, he thong duoc tich hop tri tue nhan tao (AIOps qua OpenAI) de tu dong danh gia log loi va thay doi trang thai the Jira. Moi ticket chi duoc chuyen Done khi CI/CD chay Pass 100% (Coverage > 63%).
 ```
 

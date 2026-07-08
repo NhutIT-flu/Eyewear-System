@@ -1,4 +1,4 @@
-﻿# Hướng dẫn Jenkins CI & GitHub Actions - Eyewear System
+# Hướng dẫn Jenkins CI & GitHub Actions - Eyewear System
 
 ## 1. CI/CD Enterprise Pipeline
 
@@ -6,11 +6,12 @@ Hệ thống Eyewear System hiện tại được trang bị một hệ thống 
 
 Pipeline hiện tại đạt chuẩn CI/CD Enterprise nâng cao, bao gồm các quy trình kiểm duyệt tự động sau:
 1. **Quét bảo mật mã nguồn (Composer Audit):** Kiểm tra lỗ hổng bảo mật của các thư viện.
-2. **Khởi tạo môi trường CSDL (Real Database):** Dựng cơ sở dữ liệu thật với cấu trúc schema.sql để phục vụ Integration Test.
-3. **Thực thi Kiểm thử PHPUnit (284 Test Cases):** Khởi chạy 284 bài Unit & Integration Test Hộp trắng (White-box) để vét cạn các nhánh code (Coverage) và kiểm tra tính đúng đắn của BVA/EP.
-4. **Phân tích Code Coverage (SonarQube):** Đo lường chất lượng mã nguồn, đảm bảo độ bao phủ (Coverage) vượt ngưỡng 66.9%.
+2. **Khởi tạo môi trường CSDL (Real Database):** Dựng cơ sở dữ liệu thật với Docker (`schema.sql`) để phục vụ Integration Test.
+3. **Thực thi Kiểm thử Đơn vị (PHPUnit):** Khởi chạy các bài Unit & Integration Test Hộp trắng (White-box) để vét cạn các nhánh code (Coverage) và kiểm tra tính đúng đắn của BVA/EP (TestDox).
+4. **Phân tích Code Coverage (SonarQube):** Đo lường chất lượng mã nguồn qua Quality Gate (Bắt buộc 0 Bugs, 0 Vulnerabilities).
 5. **Khởi chạy Kiểm thử API (Newman/Postman):** Chạy kiểm thử Hộp đen (Black-box) với hàng trăm Request trực tiếp vào các Endpoints thực tế để đảm bảo hệ thống phản hồi HTTP Status Code chính xác.
-6. **Đồng bộ với Jira:** Tự động báo cáo lỗi hoặc thay đổi trạng thái thẻ Bug trên hệ thống Jira.
+6. **Kiểm thử Giao diện Người dùng (E2E):** Sử dụng `CodeceptJS` và `Playwright` mô phỏng hành vi Click, Điền form, Checkout của khách hàng trên trình duyệt Chromium.
+7. **Jira AIOps Sync (Trí tuệ nhân tạo):** Tự động đọc Log lỗi, dùng **OpenAI (gpt-4o-mini)** phân tích và tự động tạo/cập nhật/đóng thẻ Bug trên hệ thống Jira. Đồng thời tự động phân bổ Story Point.
 
 ## 2. Lý do cần CI/CD nghiêm ngặt
 

@@ -386,7 +386,7 @@ def add_external_interfaces(doc):
             "SMTP mail server for email verification and password reset.",
             "VNPay gateway for online payment when enabled.",
             "Postman for manual API verification.",
-            "Jenkins may be used for automated test and deployment workflows.",
+            "Jenkins and GitHub Actions may be used for automated CI/CD pipelines, integrated with OpenAI (AIOps) for automated Jira ticket management.",
         ],
     )
 

@@ -45,18 +45,21 @@ git push origin bugfix/ESQ-15-fix-loi-login
 
 1. Lên giao diện **GitHub**, tạo Pull Request (PR) từ nhánh `bugfix/ESQ-15-fix-loi-login` gộp vào `main`. (Thường GitHub sẽ tự hiện nút màu xanh `Compare & pull request`).
 2. Nhấn Merge (Gộp code).
-3. Lên **Jira**, kéo cái thẻ Bug **ESQ-15** sang cột **DONE**.
-4. Hét lớn: *"Tui fix xong rồi nha ông Nhựt, pull code về test lại đi!"*
+3. **[ĐÃ TỰ ĐỘNG HÓA - AIOps]**: Bạn KHÔNG CẦN lên Jira kéo thẻ sang cột **DONE**. Hệ thống CI/CD GitHub Actions sẽ tự chạy Postman API Test. Nếu test xanh (Pass 100%), script `jira-sync.js` sẽ tự động gọi API đổi trạng thái thẻ **ESQ-15** sang DONE và comment báo cáo test.
+4. Hét lớn: *"Tui fix xong rồi nha ông Nhựt, chờ bot CI/CD chạy xanh là pull code về check nhé!"*
 
 ---
 
 ## 🔄 Quy trình dành cho Tester (Người Test Lại)
 
-Sau khi nghe báo fix xong, Tester (Nhựt) chỉ cần:
+Sau khi nghe báo fix xong và thấy Bot Discord báo Pipeline xanh, Tester (Nhựt) chỉ cần:
 1. Xóa code cũ, tải code mới về:
    ```bash
    git checkout main
    git pull origin main
    ```
-2. Mở Postman test lại.
-3. Nếu thành công -> Chụp ảnh 200 OK -> Dán vào Jira -> Xong!
+2. Chạy lại E2E Test bằng CodeceptJS:
+   ```bash
+   npx codeceptjs run --steps
+   ```
+3. Nếu thành công -> Done hoàn toàn! Mọi thứ đã có Log từ CI/CD chứng minh.

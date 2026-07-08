@@ -24,7 +24,7 @@ Hệ thống mã nguồn kiểm thử (Test Suite) của hệ thống được c
 ## 2. Thư mục `tests/Unit/Coverage/`
 **Nhiệm vụ cốt lõi:** Bơm (Boost) điểm Code Coverage và vét cạn các nhánh code rẽ (Edge Cases).
 
-Khác với `Integration`, thư mục này không quan tâm nhiều đến nghiệp vụ đúng/sai, mà nhiệm vụ của nó là **ép PHP phải chạy qua tất cả mọi dòng code**, kể cả những dòng bắt lỗi (Catch Exception) cực hiếm gặp, nhằm thỏa mãn chất lượng kiểm định (Quality Gate) của SonarQube (ngưỡng > 66.9%).
+Khác với `Integration`, thư mục này không quan tâm nhiều đến nghiệp vụ đúng/sai, mà nhiệm vụ của nó là **ép PHP phải chạy qua tất cả mọi dòng code**, kể cả những dòng bắt lỗi (Catch Exception) cực hiếm gặp, nhằm thỏa mãn chất lượng kiểm định (Quality Gate) của SonarQube (ngưỡng 63.53%).
 
 - **`EnterpriseDeepCoverageTest.php`**: Ứng dụng kỹ thuật "Transaction Rollback" (Đâm xuyên rồi rút lui). Ghi dữ liệu rác vào DB để lọt qua các rào cản validation, nhưng lập tức thu hồi lại (rollback) trước khi hàm kết thúc để giữ sạch CSDL.
 - **`EnterpriseControllerCoverageTest.php`**: Đóng vai trò như một Hacker, giả lập các HTTP Request (POST, GET, Upload File) có chủ đích xấu đâm thẳng vào Tầng Controllers để kích hoạt các nhánh trả về lỗi 400 Bad Request, 403 Forbidden, 404 Not Found.

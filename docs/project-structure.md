@@ -1,5 +1,5 @@
-﻿> ✅ **PROJECT VERIFIED & CI/CD READY**
-> *Hệ thống đã được nâng cấp lên chuẩn Enterprise với 284 kịch bản PHPUnit Tests (Coverage > 66.9%) và tích hợp hoàn toàn vào CI/CD Pipeline (Jenkins & GitHub Actions). Vui lòng tham khảo thêm tại `Testing_Architecture_Overview.md` và `jenkins-ci-guide.md` để biết cấu trúc kiểm thử mới nhất.*
+> ✅ **PROJECT VERIFIED & CI/CD READY**
+> *Hệ thống đã được nâng cấp lên chuẩn Enterprise với 284 kịch bản PHPUnit Tests (Coverage 63.53%) và tích hợp hoàn toàn vào CI/CD Pipeline (Jenkins & GitHub Actions). Tích hợp AIOps tự động quản lý thẻ qua OpenAI. Vui lòng tham khảo thêm tại `BVA_EP_Testing_Report.md` và `jenkins-ci-guide.md` để biết cấu trúc kiểm thử mới nhất.*
 
 # Project Architecture & Directory Structure
 
@@ -9,9 +9,11 @@ This document provides a comprehensive overview of the project's directory struc
 
 ```text
 .
-├── backend/           # Pure PHP (API-first, Custom N-Layered Framework)
+├── backend/           # Pure PHP (API-first, Custom N-Layered Framework, PHPUnit)
 ├── frontend/          # Vanilla JS/HTML/CSS (SPA-style with unified shell)
+├── tests/             # End-to-End (E2E) Tests (CodeceptJS, Playwright)
 ├── docs/              # Detailed documentation & diagrams
+├── .github/           # CI/CD Workflows & AIOps Scripts (Jira-Sync OpenAI)
 └── .env.example       # Global environment template
 ```
 
